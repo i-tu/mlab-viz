@@ -24,40 +24,55 @@ queue().defer(d3.json, 'data/data.json')
 function ready(error, jsonData){
     
     function translation(d){
-        return "translate(" + xScale(d.xCoord) + "," + yScale(d.yCoord) + ")";
+        return "translate(" + xScale(d.x) + "," + yScale(d.y) + ")";
     };
 
     var xScale = d3.scale.linear()
-                   .domain([d3.min(jsonData.students, function(d) { return d.xCoord; }),
-                            d3.max(jsonData.students, function(d) { return d.xCoord; })])
+                   .domain([d3.min(jsonData.students, function(d) { return d.x; }),
+                            d3.max(jsonData.students, function(d) { return d.x; })])
                    .range([ 0, width ]);
    
     var yScale = d3.scale.linear()
-                   .domain([d3.min(jsonData.students, function(d) { return d.yCoord; }),
-                            d3.max(jsonData.students, function(d) { return d.yCoord; })])
+                   .domain([d3.min(jsonData.students, function(d) { return d.y; }),
+                            d3.max(jsonData.students, function(d) { return d.y; })])
                    .range([ height, 0 ]);
 
-    function createInstances( objects ){
-        return svgContainer.selectAll("g")
-                           .data( objects )
+
+    function createInstances( objects, t ){
+        return svgContainer.selectAll(t)
+                           .data(objects)
                            .enter()
-                           .append("g")
-                           .attr("x", function(d){return xScale(d.xCoord);})
-                           .attr("y", function(d){return yScale(d.yCoord);})
-                           .attr("transform", function(d){return translation(d);});
+                           .append(t)
+                           .attr("x", function(d){return xScale(d.x);})
+                           .attr("y", function(d){return yScale(d.y);})
+                           .attr("transform", translation);
+    };
+
+    function colorCode(object){
+        var r = object.cat * 10;
+        var g = 20;
+        var b = 20;
+        return "rgb("+r+","+g+","+b+")";
     };
 
     function createStudents (object){
         object.append("circle")
               .attr("class", "student")
               .attr("r", function (d) { return 10; })
-              .style("fill", "black")
+              .style("fill", colorCode );
               
         svgContainer.selectAll("circle")
               .on('mouseover', profileTooltip.show)
               .on('mouseout', profileTooltip.hide);
     };
 
-    var students = createInstances(jsonData.students);
+    function createSkills(object){
+        object.attr("text-anchor", "middle")
+              .html( function(d){return d.name;} );
+    };
+    
+    var students = createInstances( jsonData.students, "g");
     createStudents(students);
+    var skills  = createInstances( jsonData.skills, "text");
+    createSkills(skills);
 };
