@@ -49,9 +49,20 @@ function ready(error, jsonData){
     };
 
     function colorCode(object){
-        var r = object.cat * 10;
-        var g = 20;
-        var b = 20;
+        var r = 0;
+        var g = 0;
+        var b = 0;
+
+        if(object.cat <= 10){
+            r = 255 - object.cat*10;
+        }
+        else if(object.cat <= 15){
+            g = 255 - (object.cat-10)*10;
+        }
+        else if(object.cat <= 18){
+            b = 255 - (object.cat-18)*10;
+    }
+
         return "rgb("+r+","+g+","+b+")";
     };
 
@@ -59,8 +70,9 @@ function ready(error, jsonData){
         object.append("circle")
               .attr("class", "student")
               .attr("r", function (d) { return 10; })
-              .style("fill", colorCode );
-              
+              .style("fill", colorCode )
+              .style("stroke", "rgb(0,0,0)");
+
         svgContainer.selectAll("circle")
               .on('mouseover', profileTooltip.show)
               .on('mouseout', profileTooltip.hide);
