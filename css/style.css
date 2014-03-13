@@ -1,13 +1,11 @@
 footer {
       text-align: center;
-      
   }
 
 .student{
     r:5;
     fill:black;
 }
-
 
 .profile {
   line-height: 1;
@@ -18,7 +16,7 @@ footer {
   border-radius: 2px;
 }
 
-/* Creates a small triangle extender for the tooltip */
+/* Creates a small triangle extender for the tooltip
 .profile:after {
   box-sizing: border-box;
   display: inline;
@@ -30,3 +28,4 @@ footer {
   position: absolute;
   text-align: center;
 }
+ */
