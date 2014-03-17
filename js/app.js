@@ -1,6 +1,7 @@
 var margin = {top: 50, right: 50, bottom: 50, left: 50};
 var width = $("#content").width() - margin.left - margin.right;
 var height = $(window).height() - margin.top - margin.bottom;
+var tdur = 1000;
 
 function profileText( d ) {
     return "<strong>" + d.name + "</strong>";
@@ -14,15 +15,13 @@ var svgContainer = d3.select("#content")
                     .append("svg")
                     .attr("width", width)
                     .attr("height", height)
-                    //.append("g")
-                    //.attr("transform", "translate(" + margin.left + "," + margin.top + ")")
                     .call(profileTooltip);
 
 queue().defer(d3.json, 'data/data.json')
        .await(ready);
 
 function ready(error, jsonData){
-    console.log(jsonData);
+    //console.log(jsonData);
     function translation(d){
         return "translate(" + xScale(d.x) + "," + yScale(d.y) + ")";
     };
@@ -38,7 +37,7 @@ function ready(error, jsonData){
                    .range([ height, 0 ]);
 
 
-    function createInstances( objects, type ){
+    function createInstances(objects, type){
         return svgContainer.selectAll(type)
                            .data(objects)
                            .enter()
@@ -75,7 +74,7 @@ function ready(error, jsonData){
               .attr("opacity", 0)
               .on('mouseover', profileTooltip.show)
               .on('mouseout', profileTooltip.hide)
-              .on('click', clicky );
+              .on('click', function(d){return makeAppear(students);} );
     };
 
     function clicky(d){
@@ -90,16 +89,53 @@ function ready(error, jsonData){
     
     function createSkills(object){
         object.attr("text-anchor", "middle")
-              .html( function(d){return d.name;} );
+              .html( function(d){return d.name;} )
+              .on('click', highlightSkill );
     };
 
-
-    function selectClass( c ) {
-        d3.select("#" + c);
+    function makeDisappear(d){
+        d.transition()
+         .duration(tdur)
+         .attr("opacity",0)
+         .attr("r",1);
     };
+
+    function makeAppear(d){
+      d.transition()
+       .duration(tdur)
+       .attr("opacity", 1)
+       .attr("r", 10)
+    }
+
+    function skilled(s){
+      console.log(s);
+      console.log(students);
+      return students.filter(function(d){return $.inArray(s, d.skills) !== -1;});
+    };
+
+    function unSkilled(s){
+      return students.filter(function(d){return $.inArray(s, d.skills) === -1;});
+    };
+
+    function inClass( c ) {
+        return students.filter(function(d){ return d.category === c; });
+    };
+
+    function notInClass (c){
+        return students.filter(function(d){ return d.category !== c; });
+    };
+    
+    function highlightClass(c){
+      makeDisappear(notInClass(c));
+      makeAppear(inClass(c));
+    };
+
+    function highlightSkill(s){
+      makeDisappear(unSkilled(s));
+      makeAppear(skilled(s));
+    }
 
     function createSidebar(d){
-
         d3.select("#buttons")
           .selectAll("button")
           .data(d)
@@ -108,22 +144,19 @@ function ready(error, jsonData){
           .attr("type", "button")
           .attr("class", "btn btn-default")
           .text(function(d){ return d; })
-     //     .on("click", make);
+          .on("click", highlightClass );
     };
 
-
-    var students = createInstances( jsonData.students, "circle");
+  var students = createInstances( jsonData.students, "circle" );
     createStudents(students);
-    students.transition().duration(1000).attr("opacity", 1).attr("r", 10);
+    students.transition().duration(tdur).attr("opacity", 1).attr("r", 10);
 
 
     var skills  = createInstances( jsonData.skills, "text");
     createSkills(skills);
     
     createSidebar( jsonData.classes );
-
-    console.log(students.select(function(d){return d.category.equals("ma10");}))
+    //makeAllDisappear(1);
+    //console.log(students.select(function(d){return d.category.equals("ma10");}))
         //.style("fill","rgb(255,255,0)"));
-    
-
 };
