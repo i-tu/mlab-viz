@@ -1,4 +1,4 @@
-var margin = {top: 50, right: 50, bottom: 50, left: 50};
+var margin = {top: 20, right: 20, bottom: 20, left: 20};
 var width = $("#content").width() - margin.left - margin.right;
 var height = $(window).height() - margin.top - margin.bottom;
 var tdur = 1000;
