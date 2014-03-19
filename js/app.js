@@ -2,26 +2,10 @@ var margin = {top: 50, right: 50, bottom: 50, left: 50};
 var width = $("#content").width() - margin.left - margin.right;
 var height = $(window).height() - margin.top - margin.bottom;
 var tdur = 1000;
-
-function profileText( d ) {
-    return "<strong>" + d.name + "</strong>";
-};
-
-var profileTooltip = d3.tip().attr('class', 'profile')
-                             .offset([-20, 0])
-                             .html( profileText );
-
-var svgContainer = d3.select("#content")
-                    .append("svg")
-                    .attr("width", width)
-                    .attr("height", height)
-                    .call(profileTooltip);
-
 queue().defer(d3.json, 'data/data.json')
        .await(ready);
 
 function ready(error, jsonData){
-    //console.log(jsonData);
     function translation(d){
         return "translate(" + xScale(d.x) + "," + yScale(d.y) + ")";
     };
@@ -29,12 +13,12 @@ function ready(error, jsonData){
     var xScale = d3.scale.linear()
                    .domain([d3.min(jsonData.students, function(d) { return d.x; }),
                             d3.max(jsonData.students, function(d) { return d.x; })])
-                   .range([ 0, width ]);
+                   .range([ margin.left, width - margin.right ]);
    
     var yScale = d3.scale.linear()
                    .domain([d3.min(jsonData.students, function(d) { return d.y; }),
                             d3.max(jsonData.students, function(d) { return d.y; })])
-                   .range([ height, 0 ]);
+                   .range([ height - margin.top, margin.bottom ]);
 
 
     function createInstances(objects, type){
@@ -44,7 +28,6 @@ function ready(error, jsonData){
                            .append(type)
                            .attr("x", function(d){return xScale(d.x);})
                            .attr("y", function(d){return yScale(d.y);})
-                           .attr("transform", translation);
     };
 
     function colorCode(object){
@@ -68,17 +51,30 @@ function ready(error, jsonData){
     function createStudents (object){
         object.attr("class", "student")
               .attr("category", function(d){return d.category;})
-              .attr("r", 15)//function (d) { return 10; })
+              .attr("r", 15)
               .style("fill", colorCode )
               .style("stroke", "rgb(0,0,0)")
               .attr("opacity", 0)
+              .attr("transform", translation)
               .on('mouseover', profileTooltip.show)
               .on('mouseout', profileTooltip.hide)
-              .on('click', function(d){return makeAppear(students);} );
+              .on('click', makeRelatedAppear );
     };
 
-    function clicky(d){
-        console.log(d.name);
+    function makeRelatedAppear(student){
+       makeDisappear(unRelatedSkills(student.skills));
+       makeAppear(relatedSkills(student.skills));
+
+       makeDisappear(notStudentsInClass(student.category));
+       makeAppear(studentsInClass(student.category));
+    };
+
+    function relatedSkills( skillSet ){
+      return skills.filter(function(d){return $.inArray(d.id, skillSet) !== -1;});
+    };
+    
+    function unRelatedSkills( skillSet ){
+      return skills.filter(function(d){return $.inArray(d.id, skillSet) === -1;});
     };
 
     var changeColor = (function(){
@@ -89,6 +85,7 @@ function ready(error, jsonData){
     
     function createSkills(object){
         object.attr("text-anchor", "middle")
+              .attr("opacity", 0)
               .html( function(d){return d.name;} )
               .on('click', highlightSkill );
     };
@@ -104,35 +101,46 @@ function ready(error, jsonData){
       d.transition()
        .duration(tdur)
        .attr("opacity", 1)
-       .attr("r", 10)
+       .attr("r", 15)
     }
 
-    function skilled(s){
-      console.log(s);
-      console.log(students);
-      return students.filter(function(d){return $.inArray(s, d.skills) !== -1;});
+    function skilledStudents(s){
+      return students.filter(function(d){return $.inArray(s.id, d.skills) !== -1;});
     };
 
-    function unSkilled(s){
-      return students.filter(function(d){return $.inArray(s, d.skills) === -1;});
+
+    function unSkilledStudents(s){
+      return students.filter(function(d){return $.inArray(s.id, d.skills) === -1;});
     };
 
-    function inClass( c ) {
-        return students.filter(function(d){ return d.category === c; });
+    function studentsInClass(className){
+        return students.filter(function(d){ return d.category === className; });
     };
 
-    function notInClass (c){
-        return students.filter(function(d){ return d.category !== c; });
+    function notStudentsInClass(className){
+        return students.filter(function(d){ return d.category !== className; });
     };
-    
+
+    function skillInClass(c){
+        return skills.filter(function(d){return $.inArray(d.id, c.skills) !== -1;});
+    };
+
+    function skillNotInClass(c){
+        return skills.filter(function(d){return $.inArray(d.id, c.skills) === -1;});
+    };
+
+
     function highlightClass(c){
-      makeDisappear(notInClass(c));
-      makeAppear(inClass(c));
+      makeDisappear(skillNotInClass(c));
+      makeAppear(skillInClass(c))
+
+      makeDisappear(notStudentsInClass(c.name));
+      makeAppear(studentsInClass(c.name));
     };
 
     function highlightSkill(s){
-      makeDisappear(unSkilled(s));
-      makeAppear(skilled(s));
+      makeDisappear(unSkilledStudents(s));
+      makeAppear(skilledStudents(s));
     }
 
     function createSidebar(d){
@@ -143,20 +151,36 @@ function ready(error, jsonData){
           .append("button")
           .attr("type", "button")
           .attr("class", "btn btn-default")
-          .text(function(d){ return d; })
+          .text(function(d){ return d.name; })
           .on("click", highlightClass );
     };
 
-  var students = createInstances( jsonData.students, "circle" );
-    createStudents(students);
-    students.transition().duration(tdur).attr("opacity", 1).attr("r", 10);
+    function profileText( d ) {
+        return "<strong>" + d.name + "</strong>";
+    };
 
+    function resetViz(){
+        makeAppear(students);
+        makeAppear(skills);
+    };
+
+    var profileTooltip = d3.tip().attr('class', 'profile')
+                                .offset([-20, 0])
+                                .html( profileText );
+
+    var svgContainer = d3.select("#content")
+                        .append("svg")
+                        .attr("width", width)
+                        .attr("height", height)
+                        .call(profileTooltip);
 
     var skills  = createInstances( jsonData.skills, "text");
     createSkills(skills);
-    
+    skills.transition().duration(tdur).attr("opacity", 1);
+
+    var students = createInstances( jsonData.students, "circle" );
+    createStudents(students);
+    students.transition().duration(tdur).attr("opacity", 1).attr("r", 10);
     createSidebar( jsonData.classes );
-    //makeAllDisappear(1);
-    //console.log(students.select(function(d){return d.category.equals("ma10");}))
-        //.style("fill","rgb(255,255,0)"));
+
 };
