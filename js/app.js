@@ -86,7 +86,7 @@ function ready(error, jsonData){
     function createSkills(object){
         object.attr("text-anchor", "middle")
               .attr("opacity", 0)
-              .html( function(d){return d.name;} )
+              .text( function(d){return d.name;} )
               .on('click', highlightSkill );
     };
 
