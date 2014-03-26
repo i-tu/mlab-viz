@@ -1,4 +1,4 @@
-var margin = {top: 20, right: 20, bottom: 20, left: 20};
+var margin = {top: 50, right: 20, bottom: 20, left: 20};
 var width = $("#content").width() - margin.left - margin.right;
 var height = $(window).height() - margin.top - margin.bottom;
 var tdur = 1000;
@@ -34,11 +34,9 @@ function ready(error, jsonData){
 
     function colorCode(object){
         var r=0, g=0, b=0;
-
         if(object.cat <= 10)     { r = 255 - object.cat*10;      }
         else if(object.cat <= 15){ g = 255 - (object.cat-10)*10; }
         else if(object.cat <= 18){ b = 255 - (object.cat-18)*10; }
-
         return "rgb("+r+","+g+","+b+")";
     };
 
