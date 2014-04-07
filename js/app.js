@@ -7,7 +7,6 @@ queue().defer(d3.json, 'data/data.json')
        .await(ready);
 
 function ready(error, jsonData){
-
     function translation(d){
         return "translate(" + xScale(d.x) + "," + yScale(d.y) + ")";
     };
@@ -96,11 +95,11 @@ function ready(error, jsonData){
     };
 
     function skillInClass(c){
-      return skills.filter(function(d){return $.inArray(d.id, c.skills) !== -1;});
+      return skills.filter(function(d){return c.skills[d.id] !== 0;});
     };
 
     function skillNotInClass(c){
-      return skills.filter(function(d){return $.inArray(d.id, c.skills) === -1;});
+      return skills.filter(function(d){return c.skills[d.id] === 0;});
     };
 
     function relatedSkills( skillSet ){
@@ -129,10 +128,19 @@ function ready(error, jsonData){
 
     function highlightClass(c){
       makeDisappear(skillNotInClass(c));
-      makeAppear(skillInClass(c))
+      makeAppear(skillInClass(c));
 
       makeDisappear(notStudentsInClass(c.name));
       makeAppear(studentsInClass(c.name));
+      textSizes(c);
+    };
+
+    function textSizes(c){
+      skills.transition()
+            .duration(tdur)
+            .style("font-size", function(d){
+              return (c.skills[d.id] * 50) + "%";
+            });
     };
 
     function highlightSkill(s){
