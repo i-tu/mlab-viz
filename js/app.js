@@ -7,6 +7,7 @@ queue().defer(d3.json, 'data/data.json')
        .await(ready);
 
 function ready(error, jsonData){
+
     function translation(d){
         return "translate(" + xScale(d.x) + "," + yScale(d.y) + ")";
     };
@@ -42,14 +43,46 @@ function ready(error, jsonData){
     function createStudents (object){
         object.attr("class", "student")
               .attr("category", function(d){return d.category;})
-              .attr("r", 15)
-              .style("fill", colorCode )
-              .style("stroke", "rgb(0,0,0)")
+              .attr("r", 20)
+              .style("fill", function(d) { return "url(#" + d.n + ")"; })
+              .style("stroke-width", 2)
+              .style("stroke", colorCode)//"rgb(0,0,0)")
+        
               .attr("opacity", 0)
               .attr("transform", translation)
               .on('mouseover', profileTooltip.show)
               .on('mouseout', profileTooltip.hide)
-              .on('click', makeRelatedAppear );
+              .on('click', makeRelatedAppear )
+    };
+
+    /* This is a ugly hack in an imperfect world!
+       we want images in the circles, so we do it with patterns.
+       Each student gets their own pattern that is inserted in the
+       DOM at the beginning of the program.
+    */
+
+    function createImageRefs(profiles){
+      d3.select("body")
+        .data(profiles)
+        .enter()
+        .append("svg")
+        .attr("id", "mySvg")
+        .attr("width", 80)
+        .attr("height", 80)
+          .append("defs")
+            .attr('id', 'mdef')
+            .append('pattern')
+              .attr('id', function(d){ return d.n; })
+              .attr('x', 0)
+              .attr('y', 0)
+              .attr('width', 40)
+              .attr('height', 40)
+              .append("image")
+                .attr("x", 0)
+                .attr("y", 0)
+                .attr("xlink:href", function(d) {return "imgs/" + d.name + ".jpg"})
+                .attr('width', 40)
+                .attr('height', 40);
     };
 
     var changeColor = (function(){
@@ -172,6 +205,18 @@ function ready(error, jsonData){
       makeAppear(skills);
     };
 
+    function startViz(){
+      skills  = createInstances( jsonData.skills, "text");
+      createSkills(skills);
+      skills.transition().duration(tdur).attr("opacity", 1);
+
+      students = createInstances( jsonData.students, "circle" );
+      createStudents(students);
+      students.transition().duration(tdur).attr("opacity", 1).attr("r", 20);
+
+      createSidebar( jsonData.classes );
+    };
+
     var profileTooltip = d3.tip().attr('class', 'profile')
                                  .offset([-20, 0])
                                  .html( profileText );
@@ -182,13 +227,11 @@ function ready(error, jsonData){
                          .attr("height", height)
                          .call(profileTooltip);
 
-    var skills  = createInstances( jsonData.skills, "text");
-    createSkills(skills);
-    skills.transition().duration(tdur).attr("opacity", 1);
 
-    var students = createInstances( jsonData.students, "circle" );
-    createStudents(students);
-    students.transition().duration(tdur).attr("opacity", 1).attr("r", 10);
-    createSidebar( jsonData.classes );
+    var skills;
+    var students;
+
+    createImageRefs(jsonData.students);
+    startViz();
 
 };
