@@ -8,28 +8,21 @@ queue().defer(d3.json, 'data/data.json')
 
 function ready(error, jsonData){
 
-    function translation(d){
-        return "translate(" + xScale(d.x) + "," + yScale(d.y) + ")";
-    };
-
     var xScale = d3.scale.linear()
                    .domain([d3.min(jsonData.students, function(d) { return d.x; }),
                             d3.max(jsonData.students, function(d) { return d.x; })])
-                   .range([ margin.left, width - margin.right ]);
+                   .range([ 0,width]);//margin.left, width - margin.right ]);
    
     var yScale = d3.scale.linear()
                    .domain([d3.min(jsonData.students, function(d) { return d.y; }),
                             d3.max(jsonData.students, function(d) { return d.y; })])
                    .range([ height - margin.top, margin.bottom ]);
 
-
-    function createInstances(objects, type){
-        return svgContainer.selectAll(type)
-                           .data(objects)
-                           .enter()
-                           .append(type)
-                           .attr("x", function(d){return xScale(d.x);})
-                           .attr("y", function(d){return yScale(d.y);})
+    function createInstances(container, objects, type){
+        return container.selectAll(type)
+                        .data(objects)
+                        .enter()    
+                        .append(type);
     };
 
     function colorCode(object){
@@ -43,46 +36,17 @@ function ready(error, jsonData){
     function createStudents (object){
         object.attr("class", "student")
               .attr("category", function(d){return d.category;})
-              .attr("r", 20)
-              .style("fill", function(d) { return "url(#" + d.n + ")"; })
-              .style("stroke-width", 2)
-              .style("stroke", colorCode)//"rgb(0,0,0)")
-        
-              .attr("opacity", 0)
-              .attr("transform", translation)
+              .style("background", function(d){ return "url(imgs_40/" + (d.name).replace(' ','%20') + ".png)";})
+              .style("stroke", colorCode)
+              .style("left", function(d){ return xScale(d.x) + "px";})
+              .style("top", function(d){return yScale(d.y) + "px";})
+              .style("opacity", 0)
+            /*
               .on('mouseover', profileTooltip.show)
               .on('mouseout', profileTooltip.hide)
-              .on('click', makeRelatedAppear )
-    };
-
-    /* This is a ugly hack in an imperfect world!
-       we want images in the circles, so we do it with patterns.
-       Each student gets their own pattern that is inserted in the
-       DOM at the beginning of the program.
-    */
-
-    function createImageRefs(profiles){
-      d3.select("body")
-        .data(profiles)
-        .enter()
-        .append("svg")
-        .attr("id", "mySvg")
-        .attr("width", 80)
-        .attr("height", 80)
-          .append("defs")
-            .attr('id', 'mdef')
-            .append('pattern')
-              .attr('id', function(d){ return d.n; })
-              .attr('x', 0)
-              .attr('y', 0)
-              .attr('width', 40)
-              .attr('height', 40)
-              .append("image")
-                .attr("x", 0)
-                .attr("y", 0)
-                .attr("xlink:href", function(d) {return "imgs/" + d.name + ".jpg"})
-                .attr('width', 40)
-                .attr('height', 40);
+            */
+              .on('click', makeRelatedAppear );
+            
     };
 
     var changeColor = (function(){
@@ -91,40 +55,40 @@ function ready(error, jsonData){
       }})();
     
     function createSkills(object){
-      object.attr("text-anchor", "middle")
+      object.attr("class", "skill")
             .attr("opacity", 0)
+            .style("left", function(d){return xScale(d.x) + "px";})
+            .style("top", function(d){return yScale(d.y) + "px";})
             .text( function(d){return d.name;} )
-            .on('click', highlightSkill );
+            .on('click', highlightSkill );     
     };
 
-    function makeDisappear(d){
+    function disappear(d){
       d.transition()
        .duration(tdur)
-       .attr("opacity",0)
-       .attr("r",1);
+       .style("opacity",0);
     };
 
-    function makeAppear(d){
+    function appear(d){
       d.transition()
        .duration(tdur)
-       .attr("opacity", 1)
-       .attr("r", 15)
+       .style("opacity", 1);
     }
 
-    function skilledStudents(s){
+    function studentsWithSkill(s){
       return students.filter(function(d){return $.inArray(s.id, d.skills) !== -1;});
     };
 
-    function unSkilledStudents(s){
+    function studentsNotWithSkill(s){
       return students.filter(function(d){return $.inArray(s.id, d.skills) === -1;});
     };
 
-    function studentsInClass(className){
-      return students.filter(function(d){ return d.category === className; });
+    function studentsInClass(c){
+      return students.filter(function(d){ return d.category === c; });
     };
 
-    function notStudentsInClass(className){
-      return students.filter(function(d){ return d.category !== className; });
+    function studentsNotInClass(c){
+      return students.filter(function(d){ return d.category !== c; });
     };
 
     function skillInClass(c){
@@ -135,37 +99,40 @@ function ready(error, jsonData){
       return skills.filter(function(d){return c.skills[d.id] === 0;});
     };
 
-    function relatedSkills( skillSet ){
+    function skillsInSkillset( skillSet ){
       return skills.filter(function(d){return $.inArray(d.id, skillSet) !== -1;});
     };
 
-    function unRelatedSkills( skillSet ){
+    function skillsNotInSkillset( skillSet ){
       return skills.filter(function(d){return $.inArray(d.id, skillSet) === -1;});
     };
 
-    function skillsRelatedTo( studs ){
-      return relatedSkills(_.union(_.flatten(_.map(studs[0], function(d){return d.__data__.skills;}))));
+    function skillsRelatedToStudents(s){
+      return skillsInSkillset(_.union(_.flatten(_.map(s[0], function(d){return d.__data__.skills;}))));
     };
 
-    function skillsNotRelatedTo( studs ){
-      return unRelatedSkills(_.union(_.flatten(_.map(studs[0], function(d){return d.__data__.skills;}))));
+    function skillsNotRelatedToStudents(s){
+      return skillsNotInSkillset(_.union(_.flatten(_.map(s[0], function(d){return d.__data__.skills;}))));
     };
 
     function makeRelatedAppear(student){
-       makeDisappear(unRelatedSkills(student.skills));
-       makeAppear(relatedSkills(student.skills));
+       disappear(skillsNotInSkillset(student.skills));
+       appear(skillsInSkillset(student.skills));
 
-       makeDisappear(notStudentsInClass(student.category));
-       makeAppear(studentsInClass(student.category));
+       disappear(studentsNotInClass(student.category));
+       appear(studentsInClass(student.category));
     };
 
     function highlightClass(c){
-      makeDisappear(skillNotInClass(c));
-      makeAppear(skillInClass(c));
 
-      makeDisappear(notStudentsInClass(c.name));
-      makeAppear(studentsInClass(c.name));
+      disappear(skillNotInClass(c));
+      appear(skillInClass(c));
+
+      disappear(studentsNotInClass(c.name));
+      appear(studentsInClass(c.name));
       textSizes(c);
+
+      $("#hdr").text(c.name);
     };
 
     function textSizes(c){
@@ -177,61 +144,102 @@ function ready(error, jsonData){
     };
 
     function highlightSkill(s){
-      makeDisappear(unSkilledStudents(s));
-      makeAppear(skilledStudents(s));
+      disappear(studentsNotWithSkill(s));
+      appear(studentsWithSkill(s));
 
-      makeDisappear( skillsNotRelatedTo( skilledStudents(s) ));
-      makeAppear( skillsRelatedTo( skilledStudents(s) ));
+      disappear( skillsNotRelatedToStudents( studentsWithSkill(s) ));
+      appear( skillsRelatedToStudents( studentsWithSkill(s) ));
     };
 
     function createSidebar(d){
-      d3.select("#buttons")
-        .selectAll("button")
-        .data(d)
-        .enter() 
-        .append("button")
-        .attr("type", "button")
-        .attr("class", "btn btn-default")
-        .text(function(d){ return d.name; })
-        .on("click", highlightClass );
+
+      var getID = function(x) { return "class_" + x.name.slice(-2); };
+      
+      var getIcon = function(x) {
+        var icon = "";
+
+        if(x.indexOf("sound") > -1)
+          icon = "headphones";
+        else if(x.indexOf("games") > -1)
+          icon = "tower";
+        else if(x.indexOf("ma") > -1)
+          icon = "asterisk";
+        else
+          icon = "briefcase";
+
+        return "glyphicon glyphicon-" + icon;
+      };
+
+      d3.select("#buttonYears")
+        .selectAll("btn-group")
+        .data( _.uniq(_.map(d, getID)) )
+        .enter()
+        .append("p")
+        .text( function(x){ return x;} )
+        .append("btn-group")
+        .attr("type", "button-group")
+        .attr("class", "btn-group btn-group-sm")
+        .attr("id", function(x){ return x; } );
+
+      _.each( _.groupBy(d, getID), function(x) {
+        d3.select("#" + getID(x[0]) )
+          .selectAll("button")
+          .data(x)
+          .enter()
+          .append("button")
+          .attr("type", "button")
+          .attr("class", "btn btn-default btn-sm")
+          .append("span")
+          .attr("class", function(x){ return getIcon(x.name); })
+          .on("click", highlightClass );
+      } );
+
     };
+
+    function layoutStudents(){
+      force = d3.layout.force()
+                       .nodes(students)
+                       .on("tick", move)                       
+                       .gravity(0)
+                       .charge(1)
+                       .friction(0.87)
+                       .start();
+    }
+
+    function move(){
+      students.style("left", function(d){return d.x + "px";})
+              .style("top",  function(d){return d.y + "px";});
+    }
 
     function profileText( d ) {
       return "<strong>" + d.name + "</strong>";
     };
 
     function resetViz(){
-      makeAppear(students);
-      makeAppear(skills);
+      appear(students);
+      appear(skills);
     };
+    
+    var force;
 
     function startViz(){
-      skills  = createInstances( jsonData.skills, "text");
+      skills  = createInstances(container, jsonData.skills, "text");
       createSkills(skills);
-      skills.transition().duration(tdur).attr("opacity", 1);
+      skills.transition().duration(tdur).style("opacity", 1);
 
-      students = createInstances( jsonData.students, "circle" );
+      students = createInstances(container, jsonData.students, "div" );
       createStudents(students);
-      students.transition().duration(tdur).attr("opacity", 1).attr("r", 20);
+      students.transition().duration(tdur).style("opacity", 1)
 
       createSidebar( jsonData.classes );
+  //      layoutStudents();
     };
 
-    var profileTooltip = d3.tip().attr('class', 'profile')
-                                 .offset([-20, 0])
-                                 .html( profileText );
-
-    var svgContainer = d3.select("#content")
-                         .append("svg")
+    var container = d3.select("#content")
                          .attr("width", width)
-                         .attr("height", height)
-                         .call(profileTooltip);
-
-
+                         .attr("height", height);
     var skills;
     var students;
 
-    createImageRefs(jsonData.students);
     startViz();
-
 };

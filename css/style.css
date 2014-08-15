@@ -2,11 +2,52 @@ footer {
       text-align: center;
   }
 
-.student{
-    r:5;
-    fill:black;
+body {
+    background-image: url('subtle_dots.png');
 }
 
+.col-md-8{
+    border-style: solid;
+    border-width: thin;
+}
+
+.student{
+  position: absolute;
+  display: block;
+  border-radius: 20px;
+  width: 40px;
+  height: 40px;
+
+  overflow-y: hidden ! important;
+  overflow-x: hidden ! important;
+  background-size: cover;//100% 100%;
+  stroke-width: 2;
+
+  style-webkit-background-clip: padding-box; 
+  -moz-background-clip: padding; 
+  background-clip: padding-box;
+}
+
+.skill{
+  font-family: verdana, sans-serif;
+  text-anchor: middle;
+  text-align:center;
+  text-size:20px;
+  position: absolute;
+  margin: 0 auto;
+ /* display:block;*/
+}
+
+* {
+  -webkit-user-select: none;
+}
+
+*:active,
+text:hover {
+  cursor: pointer;
+}
+
+/*
 .profile {
   line-height: 1;
   font-weight: bold;
@@ -14,18 +55,4 @@ footer {
   background: rgba(0, 0, 0, 0.8);
   color: #fff;
   border-radius: 2px;
-}
-
-/* Creates a small triangle extender for the tooltip
-.profile:after {
-  box-sizing: border-box;
-  display: inline;
-  font-size: 10px;
-  width: 100%;
-  line-height: 1;
-  color: rgba(0, 0, 0, 0.8);
-  content: "\25BC";
-  position: absolute;
-  text-align: center;
-}
- */
+}*/

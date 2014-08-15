@@ -1,6 +1,9 @@
-imgs/*
+imgs*
+
 *.json
 
 *.swo
 
 *.swp
+
+*.zip
