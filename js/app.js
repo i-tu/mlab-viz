@@ -228,7 +228,7 @@ function ready(error, jsonData){
       students.transition().duration(tdur).style("opacity", 1)
 
       createSidebar( jsonData.classes );
-      layoutStudents();
+   //   layoutStudents();
     };
 
     $('#hdr').on('click', resetViz);
