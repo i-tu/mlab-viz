@@ -11,7 +11,7 @@ function ready(error, jsonData){
     var xScale = d3.scale.linear()
                    .domain([d3.min(jsonData.students, function(d) { return d.x; }),
                             d3.max(jsonData.students, function(d) { return d.x; })])
-                   .range([ 0,width]);//margin.left, width - margin.right ]);
+                   .range([ 0,width]); //margin.left, width - margin.right ]);
    
     var yScale = d3.scale.linear()
                    .domain([d3.min(jsonData.students, function(d) { return d.y; }),
@@ -46,7 +46,6 @@ function ready(error, jsonData){
               .on('mouseout', profileTooltip.hide)
             */
               .on('click', makeRelatedAppear );
-            
     };
 
     var changeColor = (function(){
@@ -73,7 +72,7 @@ function ready(error, jsonData){
       d.transition()
        .duration(tdur)
        .style("opacity", 1);
-    }
+    };
 
     function studentsWithSkill(s){
       return students.filter(function(d){return $.inArray(s.id, d.skills) !== -1;});
@@ -121,26 +120,18 @@ function ready(error, jsonData){
 
        disappear(studentsNotInClass(student.category));
        appear(studentsInClass(student.category));
+
+       describe(student.name + '\'s network.');
     };
 
     function highlightClass(c){
-
       disappear(skillNotInClass(c));
       appear(skillInClass(c));
 
       disappear(studentsNotInClass(c.name));
       appear(studentsInClass(c.name));
-      textSizes(c);
 
-      $("#hdr").text(c.name);
-    };
-
-    function textSizes(c){
-      skills.transition()
-            .duration(tdur)
-            .style("font-size", function(d){
-              return (c.skills[d.id] * 50) + "%";
-            });
+      describe('Class of ' + c.name);
     };
 
     function highlightSkill(s){
@@ -149,18 +140,24 @@ function ready(error, jsonData){
 
       disappear( skillsNotRelatedToStudents( studentsWithSkill(s) ));
       appear( skillsRelatedToStudents( studentsWithSkill(s) ));
+
+      describe('People interested in ' + s.name + ' and their interests.')
+    };
+
+    function describe(desc){
+      $('#hdr').text(desc);
     };
 
     function createSidebar(d){
 
       var getID = function(x) { return "class_" + x.name.slice(-2); };
-      
+      var getYear = function(x) {return "Class of 20" + x.name.slice(-2);};
       var getIcon = function(x) {
         var icon = "";
 
-        if(x.indexOf("sound") > -1)
+        if(x.indexOf("Sound") > -1)
           icon = "headphones";
-        else if(x.indexOf("games") > -1)
+        else if(x.indexOf("Games") > -1)
           icon = "tower";
         else if(x.indexOf("ma") > -1)
           icon = "asterisk";
@@ -172,14 +169,14 @@ function ready(error, jsonData){
 
       d3.select("#buttonYears")
         .selectAll("btn-group")
-        .data( _.uniq(_.map(d, getID)) )
+        .data( _.uniq(d))//_.map(d, getID)) )
         .enter()
         .append("p")
-        .text( function(x){ return x;} )
+        .text( getYear )
         .append("btn-group")
         .attr("type", "button-group")
         .attr("class", "btn-group btn-group-sm")
-        .attr("id", function(x){ return x; } );
+        .attr("id", getID);
 
       _.each( _.groupBy(d, getID), function(x) {
         d3.select("#" + getID(x[0]) )
@@ -193,7 +190,6 @@ function ready(error, jsonData){
           .attr("class", function(x){ return getIcon(x.name); })
           .on("click", highlightClass );
       } );
-
     };
 
     function layoutStudents(){
@@ -204,12 +200,12 @@ function ready(error, jsonData){
                        .charge(1)
                        .friction(0.87)
                        .start();
-    }
+    };
 
     function move(){
       students.style("left", function(d){return d.x + "px";})
               .style("top",  function(d){return d.y + "px";});
-    }
+    };
 
     function profileText( d ) {
       return "<strong>" + d.name + "</strong>";
@@ -232,8 +228,10 @@ function ready(error, jsonData){
       students.transition().duration(tdur).style("opacity", 1)
 
       createSidebar( jsonData.classes );
-  //      layoutStudents();
+      layoutStudents();
     };
+
+    $('#hdr').on('click', resetViz);
 
     var container = d3.select("#content")
                          .attr("width", width)
