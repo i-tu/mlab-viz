@@ -6,11 +6,6 @@ body {
     background-image: url('subtle_dots.png');
 }
 
-.col-md-8{
-    border-style: solid;
-    border-width: thin;
-}
-
 .student{
   position: absolute;
   display: block;
@@ -19,22 +14,39 @@ body {
   height: 40px;
   overflow-y: hidden ! important;
   overflow-x: hidden ! important;
-  background-size: cover;/*//100% 100%;*/
-  stroke-width: 2;
+  background-size: cover;
+
+  border-width: 0px;
+  border-style: solid;
+  border-color: #FFFFFF;
 
   style-webkit-background-clip: padding-box; 
   -moz-background-clip: padding; 
   background-clip: padding-box;
+
+}
+
+div.tooltip {   
+  position: absolute;           
+  text-align: center;           
+  width: 60px;                  
+  height: 30px;                 
+  padding: 2px;             
+  font: 12px sans-serif;        
+  color: white;
+  background: black;
+  border: 0px;      
+  border-radius: 2px;           
+  pointer-events: none;         
 }
 
 .skill{
   font-family: verdana, sans-serif;
   text-anchor: middle;
-  text-align:center;
-  text-size:20px;
+  text-align: center;
+  text-size: 20px;
   position: absolute;
   margin: 0 auto;
- /* display:block;*/
 }
 
 * {
@@ -45,13 +57,3 @@ body {
 text:hover {
   cursor: pointer;
 }
-
-/*
-.profile {
-  line-height: 1;
-  font-weight: bold;
-  padding: 12px;
-  background: rgba(0, 0, 0, 0.8);
-  color: #fff;
-  border-radius: 2px;
-}*/
