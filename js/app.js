@@ -3,14 +3,17 @@ var width = $(window).width()// - margin.left - margin.right;
 var height = $(window).height()// - margin.top - margin.bottom;
 var tdur = 1000;
 
+// read data, and once it is read, call ready.
 queue().defer(d3.json, 'data/data.json')
        .await(ready);
 
 function ready(error, jsonData){
-  
-    var tickLimit = Math.pow(jsonData.students[0].length, 2);
-    var force;
+
+    /* DEFINITIONS */
     var skills;
+    var force;
+    var nodes = [];
+    var lnks = [];
     var students;
     var nodeBaseRad = 40;
     var container = d3.select('#content')
@@ -37,14 +40,13 @@ function ready(error, jsonData){
                 .append("svg")
                 .attr("width", width)
                 .attr("height", height)
-
-    var changeColor = (function(){
-      return function(){
-        d3.select(this).style('fill', 'rgb(255,0,0)');
-      }})();
-
     
-    // Common pattern: append objects into container as type
+    function constrain(x, lo, hi) {
+      return Math.min(Math.max(x, lo), hi);
+    };
+
+
+    /* BUILDING FUNCTIONS */
     function createInstances(container, objects, type){
         return container.selectAll(type)
                         .data(objects)
@@ -52,7 +54,6 @@ function ready(error, jsonData){
                         .append(type);
     };
 
-    // Create student divs and define default behaviour
     function createStudents (object){
         object.attr('class', 'student')
               .attr('category',    function(d){ return d.category; })
@@ -62,22 +63,9 @@ function ready(error, jsonData){
               .style('opacity', 0)
               .on('mouseover', showTip)
               .on('mouseout', hideTip)
-              .on('click', makeRelatedAppear)
-              .each(createLinks);
+              .on('click', highlightStudent)
     };
 
-    function createLinks (d){
-      /*_.each(d, function(e){
-          svg.append("line")
-             .style("stroke", "black")
-             .attr("x1", function(g){return g.x;})
-             .attr("y1", 0)
-             .attr("x2", 1000)
-             .attr("y2", 1000);
-           });*/
-    };
-
-    // Create skill divs and define default behaviour
     function createSkills(object){
       object.attr('class', 'skill')
             .attr('opacity', 0)
@@ -93,6 +81,37 @@ function ready(error, jsonData){
             .on('click', action);
     };
 
+    function createForce () {
+      return d3.layout.force()
+        .nodes(students)
+        .linkDistance(50)
+        .charge(-120)
+        .friction(0.7)
+        .alpha(0.05)
+        .size([(width), height]).start()
+        .on('tick', function(e) {
+          students.style('left', function(d){ 
+            d.x = constrain(d.x, margin.left, width-margin.right);
+            return (1.5*d.x - 400) + 'px';
+          })
+          .style('top',  function(d){
+            d.y = constrain(d.y, 0, height-margin.bottom - margin.top);
+            return d.y + 'px'; });
+      }).start();
+    };
+
+    function createLinks (src, dests){
+      lnks = [];
+
+      dests.each(function(d){
+        lnks.push({ source: src, destination: d });
+      });
+
+      force.start();
+    };
+
+
+    /* TRANSITIONS */
     function showTip(d){
       tip.html(d.name)
          .style("left", (d3.event.pageX) + "px")
@@ -128,19 +147,12 @@ function ready(error, jsonData){
        });
     };
 
-    function glow(d){
-      d.transition()
-       .duration(tdur)
-       .style('border-color', '#000000')
+    function describe(desc){
+      $('#hdr').text(desc);
     };
 
-    function unglow(d){
-      d.transition()
-       .duration(tdur)
-      .style('border-color', '#FFFFFF')
-    };
 
-    // These define groups. negations could be defined in terms of 
+    /* GROUPS */
     function studentsWithSkill(s){
       return students.filter(function(d){ return $.inArray(s.id, d.skills) !== -1; });
     };
@@ -181,14 +193,20 @@ function ready(error, jsonData){
       return skillsNotInSkillset(_.union(_.flatten(_.map(s[0], function(d){ return d.__data__.skills; }))));
     };
 
-    function makeRelatedAppear(student){
-       disappear(skillsNotInSkillset(student.skills));
-       appear(skillsInSkillset(student.skills));
 
-       disappear(studentsNotInClass(student.category));
-       appear(studentsInClass(student.category));
+    /* ACTIONS */
+    function highlightStudent(student){
+      disappear(skillsNotInSkillset(student.skills));
+      appear(skillsInSkillset(student.skills));
 
-       describe(student.name + '\'s network.');
+      disappear(studentsNotInClass(student.category));
+      appear(studentsInClass(student.category));
+
+      describe(student.name + '\'s network.');
+
+      createLinks(student, studentsInClass(student.category));
+
+      force.start();
     };
 
     function highlightClass(c){
@@ -211,50 +229,19 @@ function ready(error, jsonData){
       describe('People interested in ' + s.name + ' and their interests.')
     };
 
-    function describe(desc){
-      $('#hdr').text(desc);
-    };
 
-    function resetViz(){
-      appear(students);
-      appear(skills);
-    };
-
-    function constrain(x, lo, hi) {
-      return Math.min(Math.max(x, lo), hi);
-    };
-
-    function createForce(data, selection){
-      return d3.layout.force()
-        .nodes(data)
-        .linkDistance(50)
-        .charge(-120)
-        .friction(0.7)
-        .alpha(0.05)
-        .size([(width), height])
-        .start()
-        .on('tick', function(e) {
-          selection.style('left', function(d){ 
-            d.x = constrain(d.x, margin.left, width-margin.right);
-            return (1.5*d.x - 400) + 'px';
-          })
-          .style('top',  function(d){
-            d.y = constrain(d.y, 0, height-margin.bottom - margin.top);
-            return d.y + 'px'; });
-      });
-    }
-
+    /* START/RESET */
     function startViz(){
       skills = createInstances(container, jsonData.skills, 'text');
       createSkills(skills);
-      skills.transition().duration(tdur).style('opacity', 1);
+      appear(skills);
 
       students = createInstances(container, jsonData.students, 'div');
       createStudents(students);
-      students.transition().duration(tdur).style('opacity', 1);
+      appear(students);
 
       studentDropdown = createInstances(stDDContainer, jsonData.students, 'li');
-      createDropdown(studentDropdown, makeRelatedAppear);
+      createDropdown(studentDropdown, highlightStudent);
 
       skillDropdown = createInstances(skDDContainer, jsonData.skills, 'li');
       createDropdown(skillDropdown, highlightSkill);
@@ -262,12 +249,15 @@ function ready(error, jsonData){
       classDropdown = createInstances(clDDContainer, jsonData.classes, 'li');
       createDropdown(classDropdown, highlightClass);
 
-   //   stForce = createForce(jsonData.students, students);
-      skForce = createForce(jsonData.skills, skills);
+      force = createForce();
 
       $('#hdr').on('click', resetViz);
     };
 
+    function resetViz(){
+      appear(students);
+      appear(skills);
+    };
 
     startViz();
 };
