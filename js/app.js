@@ -9,6 +9,7 @@ queue().defer(d3.json, 'data/data.json')
 function ready(error, jsonData){
   
     var tickLimit = Math.pow(jsonData.students[0].length, 2);
+    var force;
     var skills;
     var students;
     var nodeBaseRad = 40;
@@ -20,12 +21,12 @@ function ready(error, jsonData){
     var xScale = d3.scale.linear()
                    .domain([d3.min(jsonData.students, function(d) { return d.x; }),
                             d3.max(jsonData.students, function(d) { return d.x; })])
-                   .range([ margin.left, width - margin.right]);
+                   .range([ margin.left, width - margin.right - 50]);
    
     var yScale = d3.scale.linear()
                    .domain([d3.min(jsonData.students, function(d) { return d.y; }),
                             d3.max(jsonData.students, function(d) { return d.y; })])
-                   .range([ height - margin.top, margin.bottom ]);
+                   .range([ height - margin.top, margin.bottom - 50]);
 
     var tip = d3.select("body")
                 .append("div")   
@@ -87,7 +88,8 @@ function ready(error, jsonData){
     };
 
     function createDropdown(object, action){
-      object.text(function(d){ return d.name; })
+      object.append('a')
+            .text(function(d){ return d.name; })
             .on('click', action);
     };
 
@@ -110,13 +112,20 @@ function ready(error, jsonData){
     function disappear(d){
       d.transition()
        .duration(tdur)
-       .style('opacity',0);
+       .style('opacity', 0)
+       .each('end', function () {
+          this.style.display = 'none';
+       });
     };
 
     function appear(d){
       d.transition()
        .duration(tdur)
-       .style('opacity', 1);
+       .style('opacity', 1)
+       .style('display', 'block')
+       .each('end', function () {
+         this.style.display = 'block';
+       });
     };
 
     function glow(d){
@@ -206,23 +215,36 @@ function ready(error, jsonData){
       $('#hdr').text(desc);
     };
 
-    // Force directed stuff
-//    var force = d3.layout.force()
-  //                .size([width, height]);
-
-
-
     function resetViz(){
       appear(students);
       appear(skills);
     };
 
-  function constrain(x, lo, hi) {
-    return Math.min(Math.max(x, lo), hi);
-  };
+    function constrain(x, lo, hi) {
+      return Math.min(Math.max(x, lo), hi);
+    };
+
+    function createForce(data, selection){
+      return d3.layout.force()
+        .nodes(data)
+        .linkDistance(50)
+        .charge(-120)
+        .friction(0.7)
+        .alpha(0.05)
+        .size([(width), height])
+        .start()
+        .on('tick', function(e) {
+          selection.style('left', function(d){ 
+            d.x = constrain(d.x, margin.left, width-margin.right);
+            return (1.5*d.x - 400) + 'px';
+          })
+          .style('top',  function(d){
+            d.y = constrain(d.y, 0, height-margin.bottom - margin.top);
+            return d.y + 'px'; });
+      });
+    }
 
     function startViz(){
-
       skills = createInstances(container, jsonData.skills, 'text');
       createSkills(skills);
       skills.transition().duration(tdur).style('opacity', 1);
@@ -240,40 +262,12 @@ function ready(error, jsonData){
       classDropdown = createInstances(clDDContainer, jsonData.classes, 'li');
       createDropdown(classDropdown, highlightClass);
 
+   //   stForce = createForce(jsonData.students, students);
+      skForce = createForce(jsonData.skills, skills);
 
-      var force = d3.layout.force()
-        .nodes((  jsonData.students).concat(jsonData.skills))
-        .linkDistance(50)
-        .charge(-120)
-        .friction(0.7)
-        .alpha(0.05)
-        .size([width, height])
-        .start();
-
-
-      force.on('tick', function(e) {
-        skills.style('left', function(d){ 
-         // d.x = constrain(d.x, margin.left, width-margin.right);
-          return d.x + 'px';
-        })
-        .style('top',  function(d){
-          d.y = constrain(d.y, 0, height-margin.bottom - margin.top);
-          return d.y + 'px'; });
-
-        students.style('left', function(d){
-        //  d.x = constrain(d.x, margin.left, width-margin.right);
-          return d.x + 'px';
-        })
-        .style('top',  function(d){
-          d.y = constrain(d.y, 0, height-margin.bottom);
-          return d.y + 'px'; });
-
-
-      });
-
+      $('#hdr').on('click', resetViz);
     };
 
-    $('#hdr').on('click', resetViz);
 
     startViz();
 };

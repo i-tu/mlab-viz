@@ -16,15 +16,20 @@ body {
   overflow-x: hidden ! important;
   background-size: cover;
 
-  border-width: 0px;
+  border-width: 1px;
   border-style: solid;
-  border-color: #FFFFFF;
+  border-color: #f8f8f8;
 
   style-webkit-background-clip: padding-box; 
   -moz-background-clip: padding; 
   background-clip: padding-box;
 
 }
+
+.student:hover {
+  border-color: #000000;
+}
+
 
 div.tooltip {   
   position: absolute;           
@@ -41,12 +46,19 @@ div.tooltip {
 }
 
 .skill{
-  font-family: verdana, sans-serif;
   text-anchor: middle;
   text-align: center;
   text-size: 20px;
   position: absolute;
   margin: 0 auto;
+  cursor: pointer;
+  padding: 4pt;
+  border-radius: 8px;
+}
+
+.skill:hover {
+  background:#f8f8f8;
+  z-index:200;
 }
 
 * {
