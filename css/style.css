@@ -69,3 +69,39 @@ div.tooltip {
 text:hover {
   cursor: pointer;
 }
+
+@media screen and (max-width: 991px){
+    .columns_skills{
+        height: 200px;
+        overflow:scroll;
+    }
+    .columns_people{
+      height: 200px;
+      overflow:scroll;
+    }
+    .columns_classes{
+      height: 200px;
+      overflow:scroll;
+    }
+}
+
+@media screen and (min-width: 992px){
+    .columns_skills{
+        -moz-column-count:6; /* Firefox */
+        -webkit-column-count:6; /* Safari and Chrome */
+        column-count:6;
+        width: 1000px;
+    }
+    .columns_people{
+        -moz-column-count:8; /* Firefox */
+        -webkit-column-count:8; /* Safari and Chrome */
+        column-count:8;
+        width: 1280px;
+    }
+    .columns_classes{
+        -moz-column-count:2; /* Firefox */
+        -webkit-column-count:2; /* Safari and Chrome */
+        column-count:2;
+        width: 500px;
+    }
+}

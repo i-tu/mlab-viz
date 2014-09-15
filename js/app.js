@@ -88,16 +88,9 @@ function ready(error, jsonData){
         .charge(-120)
         .friction(0.7)
         .alpha(0.05)
-        .size([(width), height]).start()
-        .on('tick', function(e) {
-          students.style('left', function(d){ 
-            d.x = constrain(d.x, margin.left, width-margin.right);
-            return (1.5*d.x - 400) + 'px';
-          })
-          .style('top',  function(d){
-            d.y = constrain(d.y, 0, height-margin.bottom - margin.top);
-            return d.y + 'px'; });
-      }).start();
+        .size([(width), height])
+        .on('tick', move)
+        .start();
     };
 
     function createLinks (src, dests){
@@ -151,7 +144,17 @@ function ready(error, jsonData){
       $('#hdr').text(desc);
     };
 
+    function move() {
+      students.style('left', function(d){ 
+        d.x = constrain(d.x, margin.left, width-margin.right);
+        return (1.5*d.x - 400) + 'px';
+      })
+      .style('top',  function(d){
+        d.y = constrain(d.y, 0, height-margin.bottom - margin.top);
+        return d.y + 'px'; });
+    }
 
+    
     /* GROUPS */
     function studentsWithSkill(s){
       return students.filter(function(d){ return $.inArray(s.id, d.skills) !== -1; });
