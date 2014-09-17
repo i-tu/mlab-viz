@@ -60,8 +60,8 @@ function ready(error, jsonData){
         object.attr('class', 'student')
               .attr('category',    function(d){ return d.category; })
               .style('background', function(d){ return 'url(imgs_40/' + (d.name).replace(' ','%20') + '.png)'; })
-              .style('left',       function(d){ return xScale(d.x) + 'px'; })
-              .style('top',        function(d){ return yScale(d.y) + 'px'; })
+              .style('left',       function(d){ return d.x + 'px'; })
+              .style('top',        function(d){ return d.y + 'px'; })
               .style('opacity', 0)
               .attr('ox', function(d){ return d.x; })
               .attr('oy', function(d){ return d.y; })
@@ -74,8 +74,8 @@ function ready(error, jsonData){
     function createSkills(object){
       object.attr('class', 'skill')
             .style('opacity', 0)
-            .style('left', function(d){ return xScale(d.x) + 'px'; })
-            .style('top', function(d){ return yScale(d.y) + 'px'; })
+            .style('left', function(d){ return d.x + 'px'; })
+            .style('top', function(d){ return d.y + 'px'; })
             .text( function(d){ return d.name; } )
             .on('click', highlightSkill);
     };
@@ -94,24 +94,24 @@ function ready(error, jsonData){
         .charge( -1000 )
         .gravity( 0.5 )
         .friction(0.7)
-        .linkDistance(75)
+        .linkDistance(100)
         .size([width, height])
         .on('tick', function(e) {
           
           skills.style('left', function(d){ 
-            d.x = constrain(d.x, margin.left, width-margin.right);
+            //d.x = constrain(d.x, margin.left, width-margin.right);
             return d.x + 'px';
           })
           .style('top',  function(d){
-            d.y = constrain(d.y, 0, height-margin.bottom - margin.top);
+            //d.y = constrain(d.y, 0, height-margin.bottom - margin.top);
             return d.y + 'px'; });
           
           students.style('left', function(d){
-            d.x = constrain(d.x, margin.left, width-margin.right);
+            //d.x = constrain(d.x, margin.left, width-margin.right);
             return d.x + 'px';
           })
           .style('top',  function(d){
-            d.y = constrain(d.y, 0, height-margin.bottom);
+            //d.y = constrain(d.y, 0, height-margin.bottom);
             return d.y + 'px'; });
         });
 
@@ -140,8 +140,10 @@ function ready(error, jsonData){
       d.transition()
        .duration(tdur)
        .style('opacity', 0)
-       .each('end', function () {
-          this.style.display = 'none';
+       .each('end', function (d) {
+         this.style.display = 'none';
+         d.x = d.ox;
+         d.y = d.oy;
        });
     };
 
@@ -160,32 +162,49 @@ function ready(error, jsonData){
     };
 
     function moveToStart(s){
-      s.transition()
-       .duration(tdur)
-       .style('left', function(d){ return d.ox; })
-       .style('top', function(d){ return d.oy; });
+       s.style('left', function(d){ d.x = d.ox; return d.ox; })
+        .style('top', function(d){ d.y = d.oy; return d.oy; });
     };
 
-    function startForce(center){
+    function emptyForce(){
+      force.stop();
+      while(forceNodes.length > 0) { forceNodes.pop(); }
+      while(forceLinks.length > 0) { forceLinks.pop(); }
+    }
+
+    function startStudentForce(center){
+      emptyForce();
+
       var included = _.filter( jsonData.students, function(d){ return d.cat === center.cat; })
       .concat( _.filter( jsonData.skills, function(d){ return _.contains(center.skills, d.id); }));
 
-      var notIncluded = _.filter( jsonData.students, function(d){ return d.cat !== center.cat; })
-      .concat( _.filter( jsonData.skills, function(d){ return !_.contains(center.skills, d.id); }));
-
-      moveToStart( studentsNotInClass(center.category) );
-
-      while(forceNodes.length > 0) { forceNodes.pop(); }
-      while(forceLinks.length > 0) { forceLinks.pop(); }
+      moveToStart( students.filter(function(d){ return d.cat !== center.cat; }) );
+      //moveToStart( skills.filter(function(d){ return _.contains(center.skills, )}))
 
       _.each(included, function(d){ forceNodes.push( d ); });
-      _.each(included, function(d){
-        if(center.n !== d.n)
-          forceLinks.push({ source: center, target: d });
-      });
+      _.each(included, function(d){ forceLinks.push({ source: center, target: d }); });
 
-      console.log(forceLinks)
+      force.start();
+    };
+
+    function startSkillForce(center){
+      emptyForce();
       
+      var includedStudents = _.filter( jsonData.students, function(d){ return _.contains( d.skills, center.id) ; })
+      
+      //moveToStart( students.filter(function(d){ return _.contains( center.skills, d.id) ; }) );
+      center['fixed'] = true;
+      forceNodes.push(center);
+      _.each(includedStudents, function(d){
+        forceNodes.push( d );
+        forceLinks.push({ source: center, target: d });
+        _.each(d.skills, function(e){
+          var leaf = _.filter(jsonData.skills, function(f){ return e === f.id; })[0]
+          forceNodes.push(leaf);
+          forceLinks.push({ source: d, target: leaf });
+        }
+      )});
+
       force.start();
     };
 
@@ -241,7 +260,8 @@ function ready(error, jsonData){
     /* ACTIONS */
     function highlightStudent(student){
       describe(student.name + '\'s network.');
-      startForce( student );
+
+      startStudentForce( student );
 
       disappear(skillsNotInSkillset(student.skills));
       appear(skillsInSkillset(student.skills));
@@ -252,13 +272,15 @@ function ready(error, jsonData){
 
     function highlightSkill(skill){
       describe('People interested in ' + skill.name + ' and their interests.')
-      startForce(skill);
+
+      startSkillForce( skill );
 
       disappear(studentsNotWithSkill(skill));
       appear(studentsWithSkill(skill));
 
       disappear( skillsNotRelatedToStudents( studentsWithSkill(skill) ));
       appear( skillsRelatedToStudents( studentsWithSkill(skill) ));
+
     };
 
     function highlightClass(c){
@@ -273,6 +295,8 @@ function ready(error, jsonData){
 
     function addOriginalXY(s){
       _.each(s, function(d){
+        d.x = xScale(d.x);
+        d.y = yScale(d.y);
         d['ox'] = d.x;
         d['oy'] = d.y;
       });
@@ -280,14 +304,14 @@ function ready(error, jsonData){
 
     /* START/RESET */
     function startViz(){
+      // Skills are layed out poorly so we place them with a couple ticks of force layout.
+      placeSkills();
+
       addOriginalXY(jsonData.students);
       addOriginalXY(jsonData.skills);
 
       skills = createInstances(container, jsonData.skills, 'text');
       createSkills(skills);
-
-      // Skills are layed out poorly so we place them with a couple ticks of force layout.
-      placeSkills();
 
       appear(skills);
 
@@ -311,6 +335,7 @@ function ready(error, jsonData){
     };
 
     function resetViz(){
+      force.stop();
       moveToStart(students);
       moveToStart(skills);
       appear(students);
