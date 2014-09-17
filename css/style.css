@@ -1,6 +1,6 @@
 footer {
-      text-align: center;
-  }
+    text-align: center;
+}
 
 body {
     background-image: url('subtle_dots.png');
@@ -23,7 +23,6 @@ body {
   style-webkit-background-clip: padding-box; 
   -moz-background-clip: padding; 
   background-clip: padding-box;
-
 }
 
 .student:hover {
@@ -70,6 +69,11 @@ text:hover {
   cursor: pointer;
 }
 
+*:active,
+a:hover {
+  cursor:pointer;
+}
+
 @media screen and (max-width: 991px){
     .columns_skills{
         height: 200px;
@@ -86,6 +90,12 @@ text:hover {
 }
 
 @media screen and (min-width: 992px){
+    .columns_classes{
+        -moz-column-count:2; /* Firefox */
+        -webkit-column-count:2; /* Safari and Chrome */
+        column-count:2;
+        width: 500px;
+    }
     .columns_skills{
         -moz-column-count:6; /* Firefox */
         -webkit-column-count:6; /* Safari and Chrome */
@@ -97,11 +107,5 @@ text:hover {
         -webkit-column-count:8; /* Safari and Chrome */
         column-count:8;
         width: 1280px;
-    }
-    .columns_classes{
-        -moz-column-count:2; /* Firefox */
-        -webkit-column-count:2; /* Safari and Chrome */
-        column-count:2;
-        width: 500px;
     }
 }
