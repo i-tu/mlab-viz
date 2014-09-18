@@ -1,6 +1,9 @@
-var margin = {top: 20, right: 40, bottom: 40, left: 40};
+
 var width = $(window).width()// - margin.left - margin.right;
 var height = $(window).height()// - margin.top - margin.bottom;
+
+var borders = { left: 0, right: width-250, top: 0, bottom: height-150};
+
 var tdur = 1000;
 
 // read data, and once it is read, call ready.
@@ -26,23 +29,18 @@ function ready(error, jsonData){
     var xScale = d3.scale.linear()
                    .domain([d3.min(jsonData.students, function(d) { return d.x; }),
                             d3.max(jsonData.students, function(d) { return d.x; })])
-                   .range([ margin.left, width - margin.right - 50]);
+                   .range([ 0, width  - 250]);
    
     var yScale = d3.scale.linear()
                    .domain([d3.min(jsonData.students, function(d) { return d.y; }),
                             d3.max(jsonData.students, function(d) { return d.y; })])
-                   .range([ height - margin.top, margin.bottom - 50]);
+                   .range([ height - 150, 0 ]);
 
     var tip = d3.select("body")
                 .append("div")   
                 .attr("class", "tooltip")               
                 .style("opacity", 0);;
-
-    var svg = d3.select("body")
-                .append("svg")
-                .attr("width", width)
-                .attr("height", height)
-    
+   
     function constrain(x, lo, hi) {
       return Math.min(Math.max(x, lo), hi);
     };
@@ -59,6 +57,7 @@ function ready(error, jsonData){
     function createStudents (object){
         object.attr('class', 'student')
               .attr('category',    function(d){ return d.category; })
+              .attr('cat', function(d){ return d.category; })
               .style('background', function(d){ return 'url(imgs_40/' + (d.name).replace(' ','%20') + '.png)'; })
               .style('left',       function(d){ return d.x + 'px'; })
               .style('top',        function(d){ return d.y + 'px'; })
@@ -92,26 +91,27 @@ function ready(error, jsonData){
         .nodes(forceNodes)
         .links(forceLinks)
         .charge( -1000 )
-        .gravity( 0.5 )
-        .friction(0.7)
-        .linkDistance(100)
+        .gravity( 0.1 )
+        .friction(0.1)
+        .linkDistance(200)
+        .alpha(0.05)
         .size([width, height])
         .on('tick', function(e) {
           
           skills.style('left', function(d){ 
-            //d.x = constrain(d.x, margin.left, width-margin.right);
+            d.x = constrain(d.x, borders.left, borders.right);
             return d.x + 'px';
           })
           .style('top',  function(d){
-            //d.y = constrain(d.y, 0, height-margin.bottom - margin.top);
+            d.y = constrain(d.y, borders.top, borders.bottom);
             return d.y + 'px'; });
           
           students.style('left', function(d){
-            //d.x = constrain(d.x, margin.left, width-margin.right);
+            d.x = constrain(d.x, borders.left, borders.right);
             return d.x + 'px';
           })
           .style('top',  function(d){
-            //d.y = constrain(d.y, 0, height-margin.bottom);
+            d.y = constrain(d.y, borders.top, borders.bottom);
             return d.y + 'px'; });
         });
 
@@ -225,11 +225,11 @@ function ready(error, jsonData){
     };
 
     function studentsInClass(c){
-      return students.filter(function(d){ return d.category === c; });
+      return students.filter(function(d){ return d.cat === c; });
     };
 
     function studentsNotInClass(c){
-      return students.filter(function(d){ return d.category !== c; });
+      return students.filter(function(d){ return d.cat !== c; });
     };
 
     function skillInClass(c){
@@ -259,6 +259,7 @@ function ready(error, jsonData){
 
     /* ACTIONS */
     function highlightStudent(student){
+      console.log(student);
       describe(student.name + '\'s network.');
 
       startStudentForce( student );
@@ -266,8 +267,8 @@ function ready(error, jsonData){
       disappear(skillsNotInSkillset(student.skills));
       appear(skillsInSkillset(student.skills));
 
-      disappear(studentsNotInClass(student.category));
-      appear(studentsInClass(student.category));
+      disappear(studentsNotInClass(student.cat));
+      appear(studentsInClass(student.cat));
     };
 
     function highlightSkill(skill){
@@ -286,11 +287,13 @@ function ready(error, jsonData){
     function highlightClass(c){
       describe('Class of ' + c.name);
 
+      emptyForce(); // No force layout in class
+
       disappear(skillNotInClass(c));
       appear(skillInClass(c));
-
-      disappear(studentsNotInClass(c.name));
-      appear(studentsInClass(c.name));
+      console.log(c);
+      disappear(studentsNotInClass(c.cat));
+      appear(studentsInClass(c.cat));
     };
 
     function addOriginalXY(s){
