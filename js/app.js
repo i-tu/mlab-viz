@@ -4,7 +4,7 @@ var height = $(window).height()// - margin.top - margin.bottom;
 
 var borders = { left: 0, right: width-250, top: 0, bottom: height-150};
 
-var tdur = 200;
+var tdur = 500;
 
 // read data, and once it is read, call ready.
 queue().defer(d3.json, 'data/data.json')
@@ -78,8 +78,6 @@ function ready(error, jsonData){
             .style('left', function(d){ return d.x + 'px'; })
             .style('top',  function(d){ return d.y + 'px'; })
             .style('opacity', 0)
-         //   .attr('ox', function(d){ return d.x; })
-           // .attr('oy', function(d){ return d.y; })
             .on('mouseover', showTip)
             .on('mouseout', hideTip)
             .attr('hover', 0)
@@ -116,15 +114,11 @@ function ready(error, jsonData){
       .on('tick', function(e) {
         move(skills);
         move(people);
-
         links.attr("x1", function(d) { return d.source.x + 20; })
              .attr("y1", function(d) { return d.source.y + 20; })
              .attr("x2", function(d) { return d.target.x + 20; })
              .attr("y2", function(d) { return d.target.y + 20; });
       });
-
-      forceNodes = force.node();
-      forceLinks = force.links();
   };
 
   function move(s){
@@ -138,20 +132,16 @@ function ready(error, jsonData){
   };
 
   function createLinks(){
-
-    var links = svg.selectAll("link")
+    links = svg.selectAll("link")
                .attr("class", "link")
-               .data(forceLinks, function(d) { 
-                  return d.source.index + '-' + d.target.index;
-                });
-
+               .data(forceLinks)
+    links.exit()
+         .remove();
     links.enter()
          .append("line")
          .attr("class", "link")
-         .style("stroke-width", function(d) { return Math.sqrt(d.value); });
 
-    links.exit()
-           .remove();
+
   };
 
   /* TRANSITIONS */
@@ -202,8 +192,10 @@ function ready(error, jsonData){
   };
 
   function moveToCenter(s){
-     s.style('left', function(d){ var cx = (borders.right - borders.left)/2; d.x = cx; return cx; })
-      .style('top', function(d){  var cy = (borders.bottom - borders.top)/2; d.y = cy; return cy; });
+     s.style('left', function(d){
+        var cx = (borders.right - borders.left)/2;
+        d.px = cx; d.x = cx; return cx; })
+      .style('top', function(d){  var cy = (borders.bottom - borders.top)/2; d.py = cy; d.y = cy; return cy; });
   };
 
   function emptyForce(){
@@ -216,8 +208,6 @@ function ready(error, jsonData){
     var included = _.filter( jsonData.people, function(d){ return d.cat === center.cat; })
     .concat( _.filter( jsonData.skills, function(d){ return _.contains(center.skills, d.id); }));
     
-    console.log(included);
-
     people.each(function(d){ d['fixed'] = false; })
     center['fixed'] = true;
 
@@ -264,7 +254,7 @@ function ready(error, jsonData){
          .charge(-600)
          .nodes(jsonData.skills)
          .on('tick', function(){move(skills)});
-
+         
          sForce.start();
          for(var i = 0;i < 3; i++)
            sForce.tick();
@@ -413,7 +403,6 @@ function ready(error, jsonData){
     createDropdown(classDropdown, highlightClass);
 
     links = createInstances(svg, [], 'line');
-
     force = createForce();
 
     $('#hdr').on('click', resetViz);
