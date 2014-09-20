@@ -105,10 +105,10 @@ function ready(error, jsonData){
     return d3.layout.force()
       .nodes(forceNodes)
       .links(forceLinks)
-      .charge( -1000 )
+      .charge( -2000 )
       .gravity( 0 )
       //.friction(0.1)
-      .linkDistance(100)
+      //.linkDistance(100)
       .alpha(0.005)
       .size([width, height])
       .on('tick', function(e) {
@@ -132,9 +132,13 @@ function ready(error, jsonData){
   };
 
   function createLinks(){
+    // This is where JQuery acts as Force Majore and saves the day,
+    // since I can't get the damn thing to work otherwise.
+    $('svg').empty();
+
     links = svg.selectAll("link")
                .data(forceLinks);
-    
+
     links.enter()
          .append("line")
          .attr("class", "link")
@@ -199,7 +203,6 @@ function ready(error, jsonData){
   };
 
   function emptyForce(){
-    //force.stop();
     while(forceNodes.length > 0) { forceNodes.pop(); }
     while(forceLinks.length > 0) { forceLinks.pop(); }
   };
