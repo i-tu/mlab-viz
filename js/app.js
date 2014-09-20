@@ -131,10 +131,10 @@ function ready(error, jsonData){
             d.y = constrain(d.y, borders.top, borders.bottom);
             return d.y + 'px'; });
 
-          links.attr("x1", function(d) { return d.source.x; })
-               .attr("y1", function(d) { return d.source.y; })
-               .attr("x2", function(d) { return d.target.x; })
-               .attr("y2", function(d) { return d.target.y; });
+          links.attr("x1", function(d) { return d.source.x + 20; })
+               .attr("y1", function(d) { return d.source.y + 20; })
+               .attr("x2", function(d) { return d.target.x + 20; })
+               .attr("y2", function(d) { return d.target.y + 20; });
         });
 
         forceNodes = force.node();
@@ -143,7 +143,7 @@ function ready(error, jsonData){
 
     function createLinks(){
       links = svg.selectAll(".link")
-                 .data(force.links())
+                 .data(forceLinks)
                  .enter()
                  .append("line")
                  .attr("class", "link")

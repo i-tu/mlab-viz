@@ -42,6 +42,10 @@ body {
   z-index: 0;
 }
 
+.link {
+    stroke: #999999;
+    stroke-width: 1.5px;
+}
 
 div.tooltip {   
   position: absolute;           
