@@ -74,6 +74,12 @@ a:hover {
   cursor:pointer;
 }
 
+*:active,
+.student:hover {
+  cursor:pointer;
+}
+
+
 @media screen and (max-width: 991px){
     .columns_skills{
         height: 200px;
