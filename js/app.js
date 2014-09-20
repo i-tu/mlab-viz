@@ -4,7 +4,7 @@ var height = $(window).height()// - margin.top - margin.bottom;
 
 var borders = { left: 0, right: width-250, top: 0, bottom: height-150};
 
-var tdur = 1000;
+var tdur = 200;
 
 // read data, and once it is read, call ready.
 queue().defer(d3.json, 'data/data.json')
@@ -13,32 +13,31 @@ queue().defer(d3.json, 'data/data.json')
 function ready(error, jsonData){
 
     /* DEFINITIONS */
-    var skills;
-    var students;
-    var center;
-
-    var force;
-    var forceNodes = [];
+    var skills;    // Skills d3 selection
+    var people;    // People d3 selection
+    var force;     // d3 force layout
+    var forceNodes = []; // nodes & links for force layout
     var forceLinks = [];
 
+    // NOTE: most stuff is, unconventionally for d3, simple divs. the svg element is just to draw lines.
     var container = d3.select('#content');
     var svg = container.append('svg')
                        .attr("width", width)
                        .attr("height", height);
 
-    var stDDContainer = d3.select('#studentDropdown');
+    var stDDContainer = d3.select('#peopleDropdown');
     var skDDContainer = d3.select('#skillDropdown');
     var clDDContainer = d3.select('#classDropdown');
 
     var xScale = d3.scale.linear()
-                   .domain([d3.min(jsonData.students, function(d) { return d.x; }),
-                            d3.max(jsonData.students, function(d) { return d.x; })])
-                   .range([ 0, width  - 250]);
+                   .domain([d3.min(jsonData.people, function(d) { return d.x; }),
+                            d3.max(jsonData.people, function(d) { return d.x; })])
+                   .range([ borders.left, borders.right]);
    
     var yScale = d3.scale.linear()
-                   .domain([d3.min(jsonData.students, function(d) { return d.y; }),
-                            d3.max(jsonData.students, function(d) { return d.y; })])
-                   .range([ height - 150, 0 ]);
+                   .domain([d3.min(jsonData.people, function(d) { return d.y; }),
+                            d3.max(jsonData.people, function(d) { return d.y; })])
+                   .range([ borders.bottom, borders.top ]);
 
     var tip = d3.select("body")
                 .append("div")   
@@ -58,14 +57,15 @@ function ready(error, jsonData){
                         .append(type);
     };
 
-    function createStudents (object){
-        object.attr('class', 'student')
+    function createpeople (object){
+        object.attr('class', 'people')
               .attr('category', function(d){ return d.category; })
               .attr('cat', function(d){ return d.category; })
               .each(function(d){
                 var header = d3.select(this);
                 var img_url = 'imgs_40/' + (d.name).replace(' ','%20') + '.png';
 
+                // If someone's picture is not present, add their initials to their node instead
                 imageExists(img_url, function(u){
                   if (u)
                     header.style('background', 'url(' + img_url + ')');
@@ -83,7 +83,7 @@ function ready(error, jsonData){
               .on('mouseover', showTip)
               .on('mouseout', hideTip)
               .attr('hover', 0)
-              .on('click', highlightStudent);
+              .on('click', highlightPerson);
     };
 
     function createSkills(object){
@@ -107,29 +107,15 @@ function ready(error, jsonData){
       return d3.layout.force()
         .nodes(forceNodes)
         .links(forceLinks)
-        .charge( -3000 )
+        .charge( -1000 )
         .gravity( 0 )
-        .friction(0.1)
+       // .friction(0.1)
         .linkDistance(100)
-        .alpha(0.05)
+        .alpha(0.005)
         .size([width, height])
         .on('tick', function(e) {
-          
-          skills.style('left', function(d){ 
-            d.x = constrain(d.x, borders.left, borders.right);
-            return d.x + 'px';
-          })
-          .style('top',  function(d){
-            d.y = constrain(d.y, borders.top, borders.bottom);
-            return d.y + 'px'; });
-          
-          students.style('left', function(d){
-            d.x = constrain(d.x, borders.left, borders.right);
-            return d.x + 'px';
-          })
-          .style('top',  function(d){
-            d.y = constrain(d.y, borders.top, borders.bottom);
-            return d.y + 'px'; });
+          move(skills);
+          move(people);
 
           links.attr("x1", function(d) { return d.source.x + 20; })
                .attr("y1", function(d) { return d.source.y + 20; })
@@ -141,14 +127,32 @@ function ready(error, jsonData){
         forceLinks = force.links();
     };
 
+    function move(s){
+         s.style('left', function(d){
+            d.x = constrain(d.x, borders.left, borders.right);
+            return d.x + 'px';
+          })
+          .style('top',  function(d){
+            d.y = constrain(d.y, borders.top, borders.bottom);
+            return d.y + 'px'; });
+    };
+
     function createLinks(){
-      links = svg.selectAll(".link")
-                 .data(forceLinks)
-                 .enter()
-                 .append("line")
+      links = svg.selectAll("link")
                  .attr("class", "link")
-                 .style("stroke-width", function(d) { return Math.sqrt(d.value); });
-    }
+                 .data(forceLinks, function(d) { 
+                    var id = d.source.index + '-' + d.target.index;
+                    return id;
+                  });
+
+      links.enter()
+           .append("line")
+           .attr("class", "link")
+           .style("stroke-width", function(d) { return Math.sqrt(d.value); });
+
+      links.exit()
+           .remove();
+    };
 
     /* TRANSITIONS */
     function showTip(d){
@@ -197,20 +201,29 @@ function ready(error, jsonData){
         .style('top', function(d){ d.y = d.oy; return d.oy; });
     };
 
+    function moveToCenter(s){
+      console.log(s);
+       s.style('left', function(d){ var cx = (borders.right - borders.left)/2; d.x = cx; return cx; })
+        .style('top', function(d){  var cy = (borders.bottom - borders.top)/2; d.y = cy; return cy; });
+    };
+
     function emptyForce(){
       force.stop();
       while(forceNodes.length > 0) { forceNodes.pop(); }
       while(forceLinks.length > 0) { forceLinks.pop(); }
-    }
+    };
 
-    function startStudentForce(center){
+    function startPeopleForce(center){
       emptyForce();
 
-      var included = _.filter( jsonData.students, function(d){ return d.cat === center.cat; })
+      var included = _.filter( jsonData.people, function(d){ return d.cat === center.cat; })
       .concat( _.filter( jsonData.skills, function(d){ return _.contains(center.skills, d.id); }));
+      moveToStart( people.filter(function(d){ return d.cat !== center.cat; }) );
+     // moveToStart( skills.filter(function(d){ return _.contains(center.skills, )}))
+      moveToCenter( findPerson(center) );
 
-      //moveToStart( students.filter(function(d){ return d.cat !== center.cat; }) );
-      //moveToStart( skills.filter(function(d){ return _.contains(center.skills, )}))
+     people.each(function(d){ d['fixed'] = false; })
+     center['fixed'] = true;
 
       _.each(included, function(d){ forceNodes.push( d ); });
       _.each(included, function(d){ forceLinks.push({ source: center, target: d }); });
@@ -220,24 +233,31 @@ function ready(error, jsonData){
       force.start();
     };
 
-    function startSkillForce(center){
-      emptyForce();
-      
-      var includedStudents = _.filter( jsonData.students, function(d){ return _.contains( d.skills, center.id) ; })
-      
-      //moveToStart( students.filter(function(d){ return _.contains( center.skills, d.id) ; }) );
+    function findPerson(person){
+      return people.filter(function(d){ return d.n === person.n; });
+    };
 
+    function findSkill(skill){
+      return skills.filter(function(d){ return d.id === skill.id; });
+    };
+
+    function startSkillForce(center){
+      moveToStart( people.filter(function(d){ return _.contains( center.skills, d.id) ; }) );
+
+      skills.each(function(d){ d['fixed'] = false; })
       center['fixed'] = true;
+
       forceNodes.push(center);
-      _.each(includedStudents, function(d){
-        forceNodes.push( d );
-        forceLinks.push({ source: center, target: d });
-        _.each(d.skills, function(e){
-          var leaf = _.filter(jsonData.skills, function(f){ return e === f.id; })[0]
-          forceNodes.push(leaf);
-          forceLinks.push({ source: d, target: leaf });
-        }
-      )});
+      _.each(_.filter( jsonData.people, function(d){ return _.contains( d.skills, center.id) ; }),
+          function(d){
+          forceNodes.push( d );
+          forceLinks.push({ source: center, target: d });
+          //_.each(d.skills, function(e){
+        //  var leaf = _.filter(jsonData.skills, function(f){ return e === f.id; })[0]
+        //  forceNodes.push(leaf);
+        //  forceLinks.push({ source: d, target: leaf });
+        //}
+      });
 
       createLinks();
 
@@ -245,27 +265,34 @@ function ready(error, jsonData){
     };
 
     function placeSkills(){
-      /*var sForce = d3.layout.force()
+      var sForce = d3.layout.force()
+           .gravity(0)
+           .charge(-1000)
            .nodes(jsonData.skills)
-           .on('tick', move(skills))
-           .start();*/
+           .on('tick', move(skills));
+
+           sForce.start();
+          // for(var i = 0;i < 10; i++)
+          //   sForce.tick();
+          // sForce.stop();
     };
+
 
     /* GROUPS */
-    function studentsWithSkill(s){
-      return students.filter(function(d){ return $.inArray(s.id, d.skills) !== -1; });
+    function peopleWithSkill(s){
+      return people.filter(function(d){ return $.inArray(s.id, d.skills) !== -1; });
     };
 
-    function studentsNotWithSkill(s){
-      return students.filter(function(d){ return $.inArray(s.id, d.skills) === -1; });
+    function peopleNotWithSkill(s){
+      return people.filter(function(d){ return $.inArray(s.id, d.skills) === -1; });
     };
 
-    function studentsInClass(c){
-      return students.filter(function(d){ return d.cat === c; });
+    function peopleInClass(c){
+      return people.filter(function(d){ return d.cat === c; });
     };
 
-    function studentsNotInClass(c){
-      return students.filter(function(d){ return d.cat !== c; });
+    function peopleNotInClass(c){
+      return people.filter(function(d){ return d.cat !== c; });
     };
 
     function skillInClass(c){
@@ -284,40 +311,46 @@ function ready(error, jsonData){
       return skills.filter(function(d){ return $.inArray(d.id, skillSet) === -1; });
     };
 
-    function skillsRelatedToStudents(s){
+    function skillsRelatedToPeople(s){
       return skillsInSkillset(_.union(_.flatten(_.map(s[0], function(d){ return d.__data__.skills; }))));
     };
 
-    function skillsNotRelatedToStudents(s){
+    function skillsNotRelatedToPeople(s){
       return skillsNotInSkillset(_.union(_.flatten(_.map(s[0], function(d){ return d.__data__.skills; }))));
     };
 
 
     /* ACTIONS */
-    function highlightStudent(student){
-      describe(student.name + '\'s network.');
+    function highlightPerson(person){
+      describe(person.name + '\'s network.');
+      
+      emptyForce();
+      moveToCenter(findPerson(person));
+      startPeopleForce( person );
 
-      startStudentForce( student );
+      disappear(skillsNotInSkillset(person.skills));
+      appear(skillsInSkillset(person.skills));
 
-      disappear(skillsNotInSkillset(student.skills));
-      appear(skillsInSkillset(student.skills));
-
-      disappear(studentsNotInClass(student.cat));
-      appear(studentsInClass(student.cat));
+      disappear(peopleNotInClass(person.cat));
+      appear(peopleInClass(person.cat));
 
       hideTip();
     };
 
     function highlightSkill(skill){
-      describe('People interested in ' + skill.name + ' and their interests.')
+      describe('People interested in ' + skill.name)
 
+      emptyForce();
+      moveToCenter(findSkill(skill));
       startSkillForce( skill );
 
-      disappear(studentsNotWithSkill(skill));
-      appear(studentsWithSkill(skill));
+      disappear(peopleNotWithSkill(skill));
+      appear(peopleWithSkill(skill));
 
-      disappear( skillsNotRelatedToStudents( studentsWithSkill(skill) ));
-      appear( skillsRelatedToStudents( studentsWithSkill(skill) ));
+      disappear( skills.filter(function(d){ return d.id !== skill.id; } ));
+
+    //  disappear( skillsNotRelatedToPeople( peopleWithSkill(skill) ));
+    //  appear( skillsRelatedToPeople( peopleWithSkill(skill) ));
 
       hideTip();
     };
@@ -329,8 +362,8 @@ function ready(error, jsonData){
 
       disappear(skillNotInClass(c));
       appear(skillInClass(c));
-      disappear(studentsNotInClass(c.cat));
-      appear(studentsInClass(c.cat));
+      disappear(peopleNotInClass(c.cat));
+      appear(peopleInClass(c.cat));
 
       hideTip();
     };
@@ -342,10 +375,10 @@ function ready(error, jsonData){
       });
     };
 
-    function scale(s){
+    function scale(s, t){
       _.each(s, function(d){
-        d.x = xScale(d.x);
-        d.y = yScale(d.y);
+          d.x = t * xScale(d.x) + (1-t)*(borders.right - borders.left )/2;
+          d.y = t * yScale(d.y) + (1-t)*(borders.bottom - borders.top )/2;
       });
     };
         
@@ -360,25 +393,24 @@ function ready(error, jsonData){
     /* START/RESET */
     function startViz(){
       // Skills are layed out poorly so we place them with a couple ticks of force layout.
-      scale(jsonData.students);
-      scale(jsonData.skills);
+      scale(jsonData.people, 1);
+      scale(jsonData.skills, 0.9); // for the force layout, since negative charge expands
 
-      addOriginalXY(jsonData.students);
+      addOriginalXY(jsonData.people);
       addOriginalXY(jsonData.skills);
-
-      placeSkills();
 
       skills = createInstances(container, jsonData.skills, 'text');
       createSkills(skills);
 
+      placeSkills();
       appear(skills);
 
-      students = createInstances(container, jsonData.students, 'div');
-      createStudents(students);
-      appear(students);
+      people = createInstances(container, jsonData.people, 'div');
+      createpeople(people);
+      appear(people);
 
-      studentDropdown = createInstances(stDDContainer, jsonData.students, 'li');
-      createDropdown(studentDropdown, highlightStudent);
+      peopleDropdown = createInstances(stDDContainer, jsonData.people, 'li');
+      createDropdown(peopleDropdown, highlightPerson);
 
       skillDropdown = createInstances(skDDContainer, jsonData.skills, 'li');
       createDropdown(skillDropdown, highlightSkill);
@@ -397,9 +429,9 @@ function ready(error, jsonData){
     function resetViz(){
       force.stop();
       hideTip();
-      moveToStart(students);
+      moveToStart(people);
       moveToStart(skills);
-      appear(students);
+      appear(people);
       appear(skills);
     };
 

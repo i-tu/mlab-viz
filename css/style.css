@@ -6,7 +6,7 @@ body {
     background-image: url('subtle_dots.png');
 }
 
-.student{
+.people{
   position: absolute;
   display: block;
   border-radius: 20px;
@@ -30,11 +30,11 @@ body {
   background-clip: padding-box;
 }
 
-.student:hover {
+.people:hover {
   border-color: #000000;
 }
 
-.student:img {
+.people:img {
   z-index: 0;
 }
 
@@ -92,14 +92,14 @@ a:hover {
 }
 
 *:active,
-.student:hover {
+.people:hover {
   cursor:pointer;
 }
 
 @media screen and (max-width: 991px){
     .columns_skills{
-        height: 200px;
-        overflow:scroll;
+      height: 200px;
+      overflow:scroll;
     }
     .columns_people{
       height: 200px;
@@ -109,6 +109,16 @@ a:hover {
       height: 200px;
       overflow:scroll;
     }
+}
+
+.navbar .navbar-nav {
+  display: inline-block;
+  float: none;
+  vertical-align: top;
+}
+
+.navbar .navbar-collapse {
+  text-align: center;
 }
 
 @media screen and (min-width: 992px){
