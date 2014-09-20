@@ -133,14 +133,14 @@ function ready(error, jsonData){
 
   function createLinks(){
     links = svg.selectAll("link")
-               .attr("class", "link")
-               .data(forceLinks)
-    links.exit()
-         .remove();
+               .data(forceLinks);
+    
     links.enter()
          .append("line")
          .attr("class", "link")
 
+    links.exit()
+         .remove();
 
   };
 
@@ -199,16 +199,21 @@ function ready(error, jsonData){
   };
 
   function emptyForce(){
-    force.stop();
+    //force.stop();
     while(forceNodes.length > 0) { forceNodes.pop(); }
     while(forceLinks.length > 0) { forceLinks.pop(); }
+  };
+
+  function unfix(){
+    people.each(function(d){ d['fixed'] = false; })
+    skills.each(function(d){ d['fixed'] = false; })
   };
 
   function startPeopleForce(center){
     var included = _.filter( jsonData.people, function(d){ return d.cat === center.cat; })
     .concat( _.filter( jsonData.skills, function(d){ return _.contains(center.skills, d.id); }));
     
-    people.each(function(d){ d['fixed'] = false; })
+    unfix();
     center['fixed'] = true;
 
     _.each(included, function(d){ forceNodes.push(d); });
@@ -228,7 +233,7 @@ function ready(error, jsonData){
   };
 
   function startSkillForce(center){
-    skills.each(function(d){ d['fixed'] = false; })
+    unfix();
     center['fixed'] = true;
 
     forceNodes.push(center);
@@ -254,7 +259,7 @@ function ready(error, jsonData){
          .charge(-600)
          .nodes(jsonData.skills)
          .on('tick', function(){move(skills)});
-         
+
          sForce.start();
          for(var i = 0;i < 3; i++)
            sForce.tick();
@@ -402,7 +407,7 @@ function ready(error, jsonData){
     classDropdown = createInstances(clDDContainer, jsonData.classes, 'li');
     createDropdown(classDropdown, highlightClass);
 
-    links = createInstances(svg, [], 'line');
+    links = createInstances(svg, [], 'link');
     force = createForce();
 
     $('#hdr').on('click', resetViz);
