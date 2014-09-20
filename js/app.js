@@ -21,7 +21,11 @@ function ready(error, jsonData){
     var forceNodes = [];
     var forceLinks = [];
 
-    var container = d3.select('#content')
+    var container = d3.select('#content');
+    var svg = container.append('svg')
+                       .attr("width", width)
+                       .attr("height", height);
+
     var stDDContainer = d3.select('#studentDropdown');
     var skDDContainer = d3.select('#skillDropdown');
     var clDDContainer = d3.select('#classDropdown');
@@ -39,7 +43,7 @@ function ready(error, jsonData){
     var tip = d3.select("body")
                 .append("div")   
                 .attr("class", "tooltip")               
-                .style("opacity", 0);;
+                .style("opacity", 0);
    
     function constrain(x, lo, hi) {
       return Math.min(Math.max(x, lo), hi);
@@ -65,12 +69,10 @@ function ready(error, jsonData){
                 imageExists(img_url, function(u){
                   if (u)
                     header.style('background', 'url(' + img_url + ')');
-                  else {
-                    console.log('booom');
+                  else
                     header.text(function(e){
                         return e.name.split(' ').map(function (f) { return f.charAt(0); }).join('');
                     });
-                  }
                 })
               })
               .style('left', function(d){ return d.x + 'px'; })
@@ -128,11 +130,25 @@ function ready(error, jsonData){
           .style('top',  function(d){
             d.y = constrain(d.y, borders.top, borders.bottom);
             return d.y + 'px'; });
+
+          links.attr("x1", function(d) { return d.source.x; })
+               .attr("y1", function(d) { return d.source.y; })
+               .attr("x2", function(d) { return d.target.x; })
+               .attr("y2", function(d) { return d.target.y; });
         });
 
         forceNodes = force.node();
         forceLinks = force.links();
     };
+
+    function createLinks(){
+      links = svg.selectAll(".link")
+                 .data(force.links())
+                 .enter()
+                 .append("line")
+                 .attr("class", "link")
+                 .style("stroke-width", function(d) { return Math.sqrt(d.value); });
+    }
 
     /* TRANSITIONS */
     function showTip(d){
@@ -193,11 +209,13 @@ function ready(error, jsonData){
       var included = _.filter( jsonData.students, function(d){ return d.cat === center.cat; })
       .concat( _.filter( jsonData.skills, function(d){ return _.contains(center.skills, d.id); }));
 
-      moveToStart( students.filter(function(d){ return d.cat !== center.cat; }) );
+      //moveToStart( students.filter(function(d){ return d.cat !== center.cat; }) );
       //moveToStart( skills.filter(function(d){ return _.contains(center.skills, )}))
 
       _.each(included, function(d){ forceNodes.push( d ); });
       _.each(included, function(d){ forceLinks.push({ source: center, target: d }); });
+
+      createLinks();
 
       force.start();
     };
@@ -208,6 +226,7 @@ function ready(error, jsonData){
       var includedStudents = _.filter( jsonData.students, function(d){ return _.contains( d.skills, center.id) ; })
       
       //moveToStart( students.filter(function(d){ return _.contains( center.skills, d.id) ; }) );
+
       center['fixed'] = true;
       forceNodes.push(center);
       _.each(includedStudents, function(d){
@@ -219,6 +238,8 @@ function ready(error, jsonData){
           forceLinks.push({ source: d, target: leaf });
         }
       )});
+
+      createLinks();
 
       force.start();
     };
@@ -316,13 +337,18 @@ function ready(error, jsonData){
 
     function addOriginalXY(s){
       _.each(s, function(d){
-        d.x = xScale(d.x);
-        d.y = yScale(d.y);
         d['ox'] = d.x;
         d['oy'] = d.y;
       });
     };
 
+    function scale(s){
+      _.each(s, function(d){
+        d.x = xScale(d.x);
+        d.y = yScale(d.y);
+      });
+    };
+        
     function imageExists(url, callback) {
       $('<img src="'+ url +'">').load(function() {
         callback( true );
@@ -334,10 +360,13 @@ function ready(error, jsonData){
     /* START/RESET */
     function startViz(){
       // Skills are layed out poorly so we place them with a couple ticks of force layout.
-      placeSkills();
+      scale(jsonData.students);
+      scale(jsonData.skills);
 
       addOriginalXY(jsonData.students);
       addOriginalXY(jsonData.skills);
+
+      placeSkills();
 
       skills = createInstances(container, jsonData.skills, 'text');
       createSkills(skills);
@@ -356,6 +385,8 @@ function ready(error, jsonData){
 
       classDropdown = createInstances(clDDContainer, jsonData.classes, 'li');
       createDropdown(classDropdown, highlightClass);
+
+      links = createInstances(svg, [], 'line');
 
       force = createForce();
 
