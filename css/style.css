@@ -15,10 +15,15 @@ body {
   overflow-y: hidden ! important;
   overflow-x: hidden ! important;
   background-size: cover;
+  background-color: #999999;
+  color: #f8f8f8;  
+  text-align:center;
 
-  border-width: 1px;
+  font-size: 20px;
+  line-height: 35px;
+  border-width: 2px;
   border-style: solid;
-  border-color: #f8f8f8;
+  border-color: #ffffff;
 
   style-webkit-background-clip: padding-box; 
   -moz-background-clip: padding; 
@@ -27,6 +32,14 @@ body {
 
 .student:hover {
   border-color: #000000;
+}
+
+.student:img {
+  z-index: 0;
+}
+
+.student:text{
+  z-index: 0;
 }
 
 
@@ -78,7 +91,6 @@ a:hover {
 .student:hover {
   cursor:pointer;
 }
-
 
 @media screen and (max-width: 991px){
     .columns_skills{

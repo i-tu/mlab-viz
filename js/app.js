@@ -56,11 +56,25 @@ function ready(error, jsonData){
 
     function createStudents (object){
         object.attr('class', 'student')
-              .attr('category',    function(d){ return d.category; })
+              .attr('category', function(d){ return d.category; })
               .attr('cat', function(d){ return d.category; })
-              .style('background', function(d){ return 'url(imgs_40/' + (d.name).replace(' ','%20') + '.png)'; })
-              .style('left',       function(d){ return d.x + 'px'; })
-              .style('top',        function(d){ return d.y + 'px'; })
+              .each(function(d){
+                var header = d3.select(this);
+                var img_url = 'imgs_40/' + (d.name).replace(' ','%20') + '.png';
+
+                imageExists(img_url, function(u){
+                  if (u)
+                    header.style('background', 'url(' + img_url + ')');
+                  else {
+                    console.log('booom');
+                    header.text(function(e){
+                        return e.name.split(' ').map(function (f) { return f.charAt(0); }).join('');
+                    });
+                  }
+                })
+              })
+              .style('left', function(d){ return d.x + 'px'; })
+              .style('top',  function(d){ return d.y + 'px'; })
               .style('opacity', 0)
               .attr('ox', function(d){ return d.x; })
               .attr('oy', function(d){ return d.y; })
@@ -82,6 +96,7 @@ function ready(error, jsonData){
     function createDropdown(object, action){
       object.sort( function(a,b){ return a.name.localeCompare(b.name); } )
             .append('a')
+            .attr('cat', function(d){ return d.cat; })
             .text(function(d){ return d.name; })
             .on('click', action);
     };
@@ -90,10 +105,10 @@ function ready(error, jsonData){
       return d3.layout.force()
         .nodes(forceNodes)
         .links(forceLinks)
-        .charge( -1000 )
-        .gravity( 0.1 )
+        .charge( -3000 )
+        .gravity( 0 )
         .friction(0.1)
-        .linkDistance(200)
+        .linkDistance(100)
         .alpha(0.05)
         .size([width, height])
         .on('tick', function(e) {
@@ -259,7 +274,6 @@ function ready(error, jsonData){
 
     /* ACTIONS */
     function highlightStudent(student){
-      console.log(student);
       describe(student.name + '\'s network.');
 
       startStudentForce( student );
@@ -269,6 +283,8 @@ function ready(error, jsonData){
 
       disappear(studentsNotInClass(student.cat));
       appear(studentsInClass(student.cat));
+
+      hideTip();
     };
 
     function highlightSkill(skill){
@@ -282,6 +298,7 @@ function ready(error, jsonData){
       disappear( skillsNotRelatedToStudents( studentsWithSkill(skill) ));
       appear( skillsRelatedToStudents( studentsWithSkill(skill) ));
 
+      hideTip();
     };
 
     function highlightClass(c){
@@ -291,9 +308,10 @@ function ready(error, jsonData){
 
       disappear(skillNotInClass(c));
       appear(skillInClass(c));
-      console.log(c);
       disappear(studentsNotInClass(c.cat));
       appear(studentsInClass(c.cat));
+
+      hideTip();
     };
 
     function addOriginalXY(s){
@@ -302,6 +320,14 @@ function ready(error, jsonData){
         d.y = yScale(d.y);
         d['ox'] = d.x;
         d['oy'] = d.y;
+      });
+    };
+
+    function imageExists(url, callback) {
+      $('<img src="'+ url +'">').load(function() {
+        callback( true );
+      }).bind('error', function() {
+        callback( false );
       });
     };
 
@@ -339,6 +365,7 @@ function ready(error, jsonData){
 
     function resetViz(){
       force.stop();
+      hideTip();
       moveToStart(students);
       moveToStart(skills);
       appear(students);
