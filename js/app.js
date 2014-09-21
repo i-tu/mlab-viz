@@ -107,11 +107,8 @@ function ready(error, jsonData){
     return d3.layout.force()
       .nodes(forceNodes)
       .links(forceLinks)
-      .charge( -2000 )
+      .charge( -3000 )
       .gravity( 0 )
-      //.friction(0.1)
-      //.linkDistance(100)
-      .alpha(0.005)
       .size([w, h])
       .on('tick', function(e) {
         move(skills);

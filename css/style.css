@@ -43,7 +43,7 @@ body {
 }
 
 .link {
-    stroke: #999999;
+    stroke: #bbbbbb;
     stroke-width: 1.5px;
 }
 
@@ -65,14 +65,19 @@ div.tooltip {
   text-anchor: middle;
   text-align: center;
   text-size: 20px;
+  background:#ffffff;
   position: absolute;
   margin: 0 auto;
   cursor: pointer;
   padding: 4pt;
   border-radius: 8px;
+  border-width: 2px;
+  border-style: solid;
+  border-color: #ffffff;
 }
 
 .skill:hover {
+  border-color:#000000;
   background:#f8f8f8;
   z-index:200;
 }
