@@ -3,6 +3,8 @@ var width = $(window).width()// - margin.left - margin.right;
 var height = $(window).height()// - margin.top - margin.bottom;
 
 var borders = { left: 0, right: width-250, top: 0, bottom: height-150};
+var w = borders.right - borders.left;
+var h = borders.bottom - borders.top;
 
 var tdur = 500;
 
@@ -22,8 +24,8 @@ function ready(error, jsonData){
   // NOTE: most stuff is, unconventionally for d3, simple divs. the svg element is just to draw lines.
   var container = d3.select('#content');
   var svg = container.append('svg')
-                     .attr("width", width-250)
-                     .attr("height", height-150);
+                     .attr("width", w)
+                     .attr("height", h);
 
   var stDDContainer = d3.select('#peopleDropdown');
   var skDDContainer = d3.select('#skillDropdown');
@@ -110,7 +112,7 @@ function ready(error, jsonData){
       //.friction(0.1)
       //.linkDistance(100)
       .alpha(0.005)
-      .size([width, height])
+      .size([w, h])
       .on('tick', function(e) {
         move(skills);
         move(people);
@@ -306,7 +308,7 @@ function ready(error, jsonData){
 
   /* ACTIONS */
   function highlightPerson(person){
-    describe(person.name + '\'s network.');
+    describe(person.name + '\'s interests and other people in ' + person.category);
     
     emptyForce();
     moveToCenter(findPerson(person));
