@@ -114,9 +114,9 @@ function ready(error, jsonData){
       .on('tick', function(e) {
         move(skills);
         move(people);
-        links.attr("x1", function(d) { return d.source.x + 20; })
+        links.attr("x1", function(d) { return d.source.x + 10; })
              .attr("y1", function(d) { return d.source.y + 20; })
-             .attr("x2", function(d) { return d.target.x + 20; })
+             .attr("x2", function(d) { return d.target.x + 10; })
              .attr("y2", function(d) { return d.target.y + 20; });
       });
   };
@@ -134,7 +134,6 @@ function ready(error, jsonData){
   function createLinks(){
     // This is where JQuery acts as Force Majore and saves the day,
     // since I can't get the damn thing to work otherwise.
-    $('svg').empty();
 
     links = svg.selectAll("link")
                .data(forceLinks);
@@ -142,10 +141,6 @@ function ready(error, jsonData){
     links.enter()
          .append("line")
          .attr("class", "link")
-
-    links.exit()
-         .remove();
-
   };
 
   /* TRANSITIONS */
@@ -203,6 +198,7 @@ function ready(error, jsonData){
   };
 
   function emptyForce(){
+    $('svg').empty();
     while(forceNodes.length > 0) { forceNodes.pop(); }
     while(forceLinks.length > 0) { forceLinks.pop(); }
   };
@@ -244,12 +240,8 @@ function ready(error, jsonData){
         function(d){
           forceNodes.push( d );
           forceLinks.push({ source: center, target: d });
-        //_.each(d.skills, function(e){
-      //  var leaf = _.filter(jsonData.skills, function(f){ return e === f.id; })[0]
-      //  forceNodes.push(leaf);
-      //  forceLinks.push({ source: d, target: leaf });
-      //}
-    });
+        }
+    );
 
     createLinks();
 
@@ -339,10 +331,8 @@ function ready(error, jsonData){
     disappear(peopleNotWithSkill(skill));
     appear(peopleWithSkill(skill));
 
+    appear( skills.filter(function(d){ return d.id === skill.id; } ));
     disappear( skills.filter(function(d){ return d.id !== skill.id; } ));
-
-  //  disappear( skillsNotRelatedToPeople( peopleWithSkill(skill) ));
-  //  appear( skillsRelatedToPeople( peopleWithSkill(skill) ));
 
     hideTip();
   };
@@ -420,7 +410,7 @@ function ready(error, jsonData){
   };
 
   function resetViz(){
-    force.stop();
+    emptyForce();
     hideTip();
     moveToStart(people);
     moveToStart(skills);
