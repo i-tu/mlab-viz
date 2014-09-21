@@ -340,7 +340,7 @@ function ready(error, jsonData){
   };
 
   function highlightClass(c){
-    describe('Class of ' + c.name);
+    describe('People in ' + c.name + ' and their interests');
 
     emptyForce(); // No force layout in class
 
