@@ -2,21 +2,23 @@
     <html>
       <head> 
           <title>MLab Helsinki people and interests visualization</title>
+          <link rel="stylesheet" href="css/bootstrap-slider.min.css">
           <link rel="stylesheet" href="css/bootstrap.css">
           <link rel="stylesheet" href="css/style.css">
           <script type="text/javascript" src="js/jquery.js"></script>
           <script type="text/javascript" src="js/bootstrap.min.js"></script>
           <script type="text/javascript" src="js/bootstrap-hover-dropdown.min.js"></script>
+          <script type="text/javascript" src="js/bootstrap-slider.min.js"></script>
           <script type="text/javascript" src="js/d3.js"></script>
           <script type="text/javascript" src="js/d3tip.js"></script>
           <script type="text/javascript" src="js/underscore-min.js"></script>
           <script type="text/javascript" src="js/queue.v1.min.js"></script>
 
-          <link rel="icon" type="image/png" href="/favicon-192x192.png" sizes="192x192">
-          <link rel="icon" type="image/png" href="/favicon-160x160.png" sizes="160x160">
-          <link rel="icon" type="image/png" href="/favicon-96x96.png" sizes="96x96">
-          <link rel="icon" type="image/png" href="/favicon-16x16.png" sizes="16x16">
-          <link rel="icon" type="image/png" href="/favicon-32x32.png" sizes="32x32">
+          <link rel="icon" type="image/png" href="favicon-192x192.png" sizes="192x192">
+          <link rel="icon" type="image/png" href="favicon-160x160.png" sizes="160x160">
+          <link rel="icon" type="image/png" href="favicon-96x96.png" sizes="96x96">
+          <link rel="icon" type="image/png" href="favicon-16x16.png" sizes="16x16">
+          <link rel="icon" type="image/png" href="favicon-32x32.png" sizes="32x32">
      </head>
      
      <body>
@@ -26,7 +28,8 @@
 
     <!-- Brand and toggle get grouped for better mobile display -->
     <div class="navbar-header">
-      <a class="navbar-brand" id="showAll" href="#">Reset</a>
+    <!-- J: Changed text to button to give something obviously clickable -->
+      <button type="button" class="btn btn-default navbar-btn" id="showAll">Reset</button>
     </div>
 
     <div class="collapse navbar-collapse">
@@ -39,7 +42,9 @@
         </li>
 
         <li class="dropdown">
-          <a href="#" class="dropdown-toggle" data-hover="dropdown" data-toggle="dropdown">Skills <span class="caret"></span></a>
+            <!-- J: Changed to 'Interests', matches better with explanation text -->
+
+          <a href="#" class="dropdown-toggle" data-hover="dropdown" data-toggle="dropdown">Interests <span class="caret"></span></a>
           <ul id = "skillDropdown" class="dropdown-menu columns_skills" role="menu">
           </ul>
         </li>
@@ -51,6 +56,10 @@
         </li>
 
       </ul>
+      <!-- J: added slider for selecting to show faces, interests or both -->
+      <form class="navbar-form navbar-left">
+        <input type="text" class="navbar-btn form-control slider" data-slider-selection="none" data-slider-tooltip="hide" data-slider-min="1" data-slider-max="5" data-slider-value="3" style="width:105px;" />
+      </form>
       <ul class="nav navbar-nav">
         <li><a class="navbar-brand" id="hdr" margin= "0 auto" href="#">Loading Media Lab...</a></li>
       </ul>
@@ -62,9 +71,10 @@
     </div><!-- /.navbar-collapse -->
   </div><!-- /.container-fluid -->
 </nav>
-  <div class="container">
+  <!-- J: Fluid container behaves more predictably: always full width, override bootstraps padding -->
+  <div class="container-fluid">
     <div class="row">
-        <div class="col-md-12" id="content"></div>
+        <div class="col-md-12" id="content" style="padding:0"></div>
     </div>
   </div>
   <script type="text/javascript" src="js/app.js"></script>

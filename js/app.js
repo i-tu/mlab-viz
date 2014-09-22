@@ -1,25 +1,46 @@
 
-var width = $(window).width()// - margin.left - margin.right;
-var height = $(window).height()// - margin.top - margin.bottom;
+var width = $('#content').width();// - margin.left - margin.right;
+var height = $(window).height() - $('#content').offset().top;// - margin.top - margin.bottom;
 
-var borders = { left: 0, right: width-250, top: 0, bottom: height-150};
+var borders = { left: 20, right: width - 60, top: 0, bottom: height - 40};
 var w = borders.right - borders.left;
 var h = borders.bottom - borders.top;
 
+// J: We collect broken_images as an array, either it is read from data/broken_images.json to avoid failed loading attempts or it is created on the fly, so that it can be copy pasted from console to serve as a base for broken_images.json.  
+var broken_images = [];
+
+// J: These are needed to know what is the z-index to return to after an element has been lifted to large z-index for hover effect.
+var person_z_index = 20;
+var skill_z_index = 10;
+
+// J: This flag is to tell if we are in force mode or if the elements should be in their original computed positions.  
+var force_view = false;
+// J: When in force mode, there is always one centered element. Store this here so that it can be reached in order to e.g. update where the center point of the screen is. 
+var centered_element = null;
+
 var tdur = 500;
 
+// J: We add a new slider to fade away skills or people, to get better view on the other. 
+var people_skills_slider = $("input.slider").slider();
+
+// J: queue is now trying to read data/broken_images too.
 // read data, and once it is read, call ready.
 queue().defer(d3.json, 'data/data.json')
+       .defer(d3.json, 'data/broken_images.json') // J:comment away if you don't have this file
        .await(ready);
 
-function ready(error, jsonData){
-
+function ready(error, jsonData, jsonBroken_images){
+  if(error) console.log(error);
   /* DEFINITIONS */
   var skills;    // Skills d3 selection
   var people;    // People d3 selection
   var force;     // d3 force layout
   var forceNodes = []; // nodes & links for force layout
   var forceLinks = [];
+  var people_moving = null;
+  var skills_moving = null;
+  // J: broken images is received from json.
+  broken_images = (jsonBroken_images) ? jsonBroken_images.missing : [];
 
   // NOTE: most stuff is, unconventionally for d3, simple divs. the svg element is just to draw lines.
   var container = d3.select('#content');
@@ -31,29 +52,161 @@ function ready(error, jsonData){
   var skDDContainer = d3.select('#skillDropdown');
   var clDDContainer = d3.select('#classDropdown');
 
+  // J: since we update xScale and yScale quite often, took the min-max functions that return only one value, that shouldn't change and stored it as a variable.
+  var original_min_x = _.min([d3.min(jsonData.people, function(d) { return d.x; }), d3.min(jsonData.skills, function(d) { return d.x; })]);
+  var original_min_y = _.min([d3.min(jsonData.people, function(d) { return d.y; }), d3.min(jsonData.skills, function(d) { return d.y; })]);
+  var original_max_x = _.max([d3.max(jsonData.people, function(d) { return d.x; }), d3.max(jsonData.skills, function(d) { return d.x; })]); 
+  var original_max_y = _.max([d3.max(jsonData.people, function(d) { return d.y; }), d3.max(jsonData.skills, function(d) { return d.y; })]);
+
   var xScale = d3.scale.linear()
-                 .domain([d3.min(jsonData.people, function(d) { return d.x; }),
-                          d3.max(jsonData.people, function(d) { return d.x; })])
+                 .domain([original_min_x,
+                          original_max_x])
                  .range([ borders.left, borders.right]);
  
   var yScale = d3.scale.linear()
-                 .domain([d3.min(jsonData.people, function(d) { return d.y; }),
-                          d3.max(jsonData.people, function(d) { return d.y; })])
+                 .domain([original_min_y,
+                          original_max_y])
                  .range([ borders.bottom, borders.top ]);
 
-  var tip = d3.select("body")
+  // J: moved tooltip to #content, because it is now positioned relative to elements that use #content's coordinates instead of previous mouse coordinates, that use document's coordinates.
+  var tip = d3.select("#content")
               .append("div")   
               .attr("class", "tooltip")               
               .style("opacity", 0);
  
+
+  // J: setting up slider. 
+  var slider_last_value = 3;
+
+  people_skills_slider.on('slide', update_people_skills_ratio);
+  people_skills_slider.on('click', update_people_skills_ratio);
+  people_skills_slider.on('slideStop', update_people_skills_ratio);
+
+  // J: Resizing without reloading is kind of important. Enabling this has caused lots of changes around the code.
+  // most important is that everywhere we are placing something to screen with d.x or d.y, we scale if with scaling function xScale or yScale. 
+  // in principle, d.x and d.y should be untouchable: they are the original data, and we shouldn't modify it.
+  // unfortunately, d3.force likes to use d.x and d.y for its own calculations, like you had noticed and some kind of x_original or xo value is required, so we can return it after d3.force has finished modifying our data.   
+  $(window).resize(function (){
+    set_scale();
+    if (force_view) {
+      moveToCenter(centered_element)
+    } else {
+      moveToStart(people);
+      moveToStart(skills);      
+    }
+  });
+
+  // J: This redefines all of the size-dependant variables set at the initialization. Called every time a resize event occurs.
+  // J: The reference is changed to be #content instead of window, as this will be the reference point for coordinates anyway.     
+  function set_scale() {
+
+    width = $('#content').width() - 80// - margin.left - margin.right;
+    height = $(window).height() - $('#content').offset().top - 40;    
+    $('#content').height(height);
+    borders = { left: 20, right: width - 60, top: 0, bottom: height - 40};
+    w = borders.right - borders.left;
+    h = borders.bottom - borders.top;
+
+    xScale = d3.scale.linear()
+                   .domain([original_min_x, original_max_x])
+                   .range([ borders.left, borders.right]);
+   
+    yScale = d3.scale.linear()
+                   .domain([original_min_y, original_max_y])
+                   .range([ borders.bottom, borders.top ]);
+    svg.attr("width", w).attr("height", h);
+  }
+
+  // J: This is a bit ugly handler for the slider, but it gets the work done  
+  function update_people_skills_ratio() {
+    v = $(this).slider('getValue');
+    if (v != slider_last_value) {
+      slider_last_value = v;
+      resetViz();
+      switch (v) {
+        case 1: // Hide people, show only skills
+          person_z_index = 10;
+          skill_z_index = 20;
+          people.style('display','block')
+          .transition()
+          .duration(tdur)
+          .style({'opacity': 0, 'z-index': person_z_index})
+          .each('end', function (d) {
+            this.style.display = 'none';
+          });
+          skills.style('display','block')
+          .transition()
+          .duration(tdur)
+          .style({'opacity': 1, 'z-index': skill_z_index});
+          break;
+        case 2: // People transparent and behind, skills on top
+          person_z_index = 10;
+          skill_z_index = 20;
+          people.style('display','block')
+          .transition()
+          .duration(tdur)
+          .style({'opacity': 0.5, 'z-index': person_z_index});
+          skills.style('display','block')
+          .transition()
+          .duration(tdur)
+          .style({'opacity': 1, 'z-index': skill_z_index});
+          break;
+        case 3: // Both visible, people on top
+          person_z_index = 20;
+          skill_z_index = 10;
+          people.style('display','block')
+          .transition()
+          .duration(tdur)
+          .style({'opacity': 1, 'z-index': person_z_index});
+          skills.style('display','block')
+          .transition()
+          .duration(tdur)
+          .style({'opacity': 1, 'z-index': skill_z_index});
+          break;
+        case 4: // People on top, skills transparent and behind
+          person_z_index = 20;
+          skill_z_index = 10;
+          people.style('display','block')
+          .transition()
+          .duration(tdur)
+          .style({'opacity': 1, 'z-index': person_z_index});
+          skills.style('display','block')
+          .transition()
+          .duration(tdur)
+          .style({'opacity': 0.5, 'z-index': skill_z_index});
+          break;
+        case 5: // Only people visible
+          person_z_index = 20;
+          skill_z_index = 10;
+          people.style('display','block')
+          .transition()
+          .duration(tdur)
+          .style({'opacity': 1, 'z-index': person_z_index});
+          skills.style('display','block')
+          .transition()
+          .duration(tdur)
+          .style({'opacity': 0, 'z-index': skill_z_index})
+          .each('end', function (d) {
+            this.style.display = 'none';
+          });
+          break;
+      }
+    }
+  };
+
+
   function constrain(x, lo, hi) {
     return Math.min(Math.max(x, lo), hi);
   };
 
 
   /* BUILDING FUNCTIONS */
-  function createInstances(container, objects, type){
-      return container.selectAll(type)
+  // J: added a 'selector' argument that is separate from the 'type', as container may now have e.g. 
+  // div.tooltip and div.person, and we are interested in one of them. Append(type) doesn't
+  // recognize .class:s, so these arguments selector and type have to be different. This is all 
+  // because .tooltip moved into #content -container.    
+  function createInstances(container, selector, objects, type){
+      return container.selectAll(selector)
                       .data(objects)
                       .enter()    
                       .append(type);
@@ -66,19 +219,28 @@ function ready(error, jsonData){
             .each(function(d){
               var header = d3.select(this);
               var img_url = 'imgs_40/' + (d.name).replace(' ','%20') + '.png';
-
-              // If someone's picture is not present, add their initials to their node instead
-              imageExists(img_url, function(u){
-                if (u)
-                  header.style('background', 'url(' + img_url + ')');
-                else
+              // J: we use the broken_images array to avoid 'Failed to load resources' -errors
+              if (broken_images.indexOf(img_url) == -1) {
+                // If someone's picture is not present, add their initials to their node instead
+                imageExists(img_url, function(u){
+                  if (u) {
+                    header.style('background', 'url(' + img_url + ')');
+                  }
+                  else {
+                    header.text(function(e){
+                        return e.name.split(' ').map(function (f) { return f.charAt(0); }).join('');
+                    });
+                    broken_images.push(img_url);
+                  }
+                });
+              } else { // J: img_url was found in broken_images, put the placeholder initials 
                   header.text(function(e){
                       return e.name.split(' ').map(function (f) { return f.charAt(0); }).join('');
                   });
-              });
+              }
             })
-            .style('left', function(d){ return d.x + 'px'; })
-            .style('top',  function(d){ return d.y + 'px'; })
+            .style('left', function(d){ return xScale(d.x) + 'px'; })
+            .style('top',  function(d){ return yScale(d.y) + 'px'; })
             .style('opacity', 0)
             .on('mouseover', showTip)
             .on('mouseout', hideTip)
@@ -89,8 +251,8 @@ function ready(error, jsonData){
   function createSkills(object){
     object.attr('class', 'skill')
           .style('opacity', 0)
-          .style('left', function(d){ return d.x + 'px'; })
-          .style('top', function(d){ return d.y + 'px'; })
+          .style('left', function(d){ return xScale(d.x) + 'px'; })
+          .style('top', function(d){ return yScale(d.y) + 'px'; })
           .text( function(d){ return d.name; } )
           .on('click', highlightSkill);
   };
@@ -103,31 +265,34 @@ function ready(error, jsonData){
           .on('click', action);
   };
 
+  // J: Moving only subsets of people and skills. Removed node and lines from initialization, they are added in startPeopleForce and startSkillsForce. 
+  // J: Added some gravity and removed center locking for people. This creates a nice bouncy effect.
   function createForce () {
     return d3.layout.force()
-      .nodes(forceNodes)
-      .links(forceLinks)
       .charge( -3000 )
-      .gravity( 0 )
-      .size([w, h])
+      .gravity( 0.2 )
+      .size([original_max_x - original_min_x, original_max_y - original_min_y])
       .on('tick', function(e) {
-        move(skills);
-        move(people);
-        links.attr("x1", function(d) { return d.source.x + 10; })
-             .attr("y1", function(d) { return d.source.y + 20; })
-             .attr("x2", function(d) { return d.target.x + 10; })
-             .attr("y2", function(d) { return d.target.y + 20; });
+        if (skills_moving) {
+          move(skills_moving);
+        }
+        if (people_moving) {
+          move(people_moving);
+        }
+        move(centered_element);
+        links.attr("x1", function(d) { return xScale(d.source.x) + 20; })
+             .attr("y1", function(d) { return yScale(d.source.y) + 20; })
+             .attr("x2", function(d) { return xScale(d.target.x) + 20; })
+             .attr("y2", function(d) { return yScale(d.target.y) + 20; });
       });
   };
 
   function move(s){
        s.style('left', function(d){
-          d.x = constrain(d.x, borders.left, borders.right);
-          return d.x + 'px';
+          return constrain(xScale(d.x), borders.left, borders.right) + 'px';
         })
         .style('top',  function(d){
-          d.y = constrain(d.y, borders.top, borders.bottom);
-          return d.y + 'px'; });
+          return constrain(yScale(d.y), borders.top, borders.bottom) + 'px'; });
   };
 
   function createLinks(){
@@ -143,14 +308,20 @@ function ready(error, jsonData){
   };
 
   /* TRANSITIONS */
+
+  // J: Modified to use the position of person as a base of tooltip instead of mouse event.
+  // Mouse event -based position depended on what direction the mouse pointer entered the
+  // person's area and it looked haphazard, as sometimes the tag went over the face, and sometimes
+  // beside the face  
   function showTip(d){
-    tip.html(d.name)
-       .style("left", (d3.event.pageX) + "px")
-       .style("top", (d3.event.pageY - 28) + "px");
-   
+    tip.html(d.name);
+    var tip_w2 = parseInt(tip.style("width")) / 2;
+    var tip_h = parseInt(tip.style("height"));
+    tip.style("left", (xScale(d.x) - tip_w2 + 20) + "px")
+       .style("top", (yScale(d.y) - tip_h + 2) + "px");
     tip.transition()        
        .duration(200)
-       .style("opacity", 0.9);
+       .style("opacity", 1.0);
    };
   
   function hideTip(d){
@@ -165,41 +336,78 @@ function ready(error, jsonData){
      .style('opacity', 0)
      .each('end', function (d) {
        this.style.display = 'none';
-       d.x = d.ox;
-       d.y = d.oy;
      });
   };
 
+  // J: Appear applies only to elements that are hidden or faded, and it also tries to put items back to their to original position. This double action is necessary, as there cannot be two separate transitions going on for one element. Movement to original position doesn't work well if the force visualization is on, so there is a condition for that. 
   function appear(d){
-    d.transition()
-     .duration(tdur)
-     .style('opacity', 1)
-     .style('display', 'block')
-     .each('end', function () {
-       this.style.display = 'block';
-     });
+    f = d.filter(function(e) {return (this.style.display === 'hidden' || this.style.opacity < 1.0) } );
+    f.style('display', 'block')
+     .each(function(d){ 
+        d.x = d.original_x; 
+        d.px = d.x; 
+        d.y = d.original_y; 
+        d.py = d.y; 
+     })
+     if (force_view) {
+       f.transition()
+        .duration(tdur)
+        .style('opacity', 1)
+        .each('end', function () {
+         this.style.display = 'block';
+       });
+     } else {
+       f.transition()
+        .duration(tdur)
+        .style('opacity', 1)
+        .style('left', function(d){ return xScale(d.x) + "px" })
+        .style('top', function(d){ return yScale(d.y) + "px" })
+        .each('end', function () {
+         this.style.display = 'block';
+         this.style.left = xScale(d.x) + "px";
+         this.style.top = xScale(d.y) + "px";
+       });
+     }
   };
 
   function describe(desc){
     $('#hdr').text(desc);
   };
 
+  // J: Animate moving back to original position  
   function moveToStart(s){
-     s.style('left', function(d){ d.x = d.ox; return d.ox; })
-      .style('top', function(d){ d.y = d.oy; return d.oy; });
+      s.each(function(d) { d.x = d.original_x; d.px = d.x; d.y = d.original_y; d.py = d.y; });
+      s.transition()
+        .duration(tdur*2)
+        .style('left', function(d){  return xScale(d.x) + "px" })
+        .style('top', function(d){ return yScale(d.y) + "px" });
+
   };
 
+  // J: Store centered_element so it can be updated in resize -event
   function moveToCenter(s){
-     s.style('left', function(d){
-        var cx = (borders.right - borders.left)/2;
-        d.px = cx; d.x = cx; return cx; })
-      .style('top', function(d){  var cy = (borders.bottom - borders.top)/2; d.py = cy; d.y = cy; return cy; });
+     centered_element = s;
+     var center_x = (original_min_x + original_max_x) / 2
+     var center_y = (original_min_y + original_max_y) / 2
+     s.style('left', function(d) {
+        d.px = center_x; 
+        d.x = center_x;
+        return xScale(d.x); + "px"})
+      .style('top', function(d){  
+        d.py = center_y;
+        d.y = center_y;
+        return yScale(d.y) + "px"; 
+      });
   };
 
   function emptyForce(){
+    force_view = false;
     $('svg').empty();
-    while(forceNodes.length > 0) { forceNodes.pop(); }
-    while(forceLinks.length > 0) { forceLinks.pop(); }
+    // J: it is probably unnecessary to empty these here
+    forceNodes = [];
+    forceLinks = [];
+    people_moving = null;
+    skills_moving = null;
   };
 
   function unfix(){
@@ -207,18 +415,38 @@ function ready(error, jsonData){
     skills.each(function(d){ d['fixed'] = false; })
   };
 
+  // J: refactored so that we can get 'people_moving' and 'skills_moving' selectors to be used in tick-method of force calculation.
   function startPeopleForce(center){
-    var included = _.filter( jsonData.people, function(d){ return d.cat === center.cat; })
-    .concat( _.filter( jsonData.skills, function(d){ return _.contains(center.skills, d.id); }));
-    
     unfix();
-    center['fixed'] = true;
-
-    _.each(included, function(d){ forceNodes.push(d); });
-    _.each(included, function(d){ forceLinks.push({ source: center, target: d }); });
+    //center['fixed'] = true;
+    people_moving = people.filter(function (d) {
+      return d.cat === center.cat;
+    });
+    skills_moving = skills.filter(function (d) {
+      return _.contains(center.skills, d.id); 
+    });
+    forceNodes[center];
+    forceLinks = [];
+    people_moving.each(function(d) { 
+      forceNodes.push(d);
+      forceLinks.push({ source: center, target: d});
+      d.px = d.x;
+      d.py = d.y;
+      }
+    );
+    skills_moving.each(function(d) { 
+      forceNodes.push(d);
+      forceLinks.push({ source: center, target: d});
+      d.px = d.x;
+      d.py = d.y;
+      }
+    );
 
     createLinks();
 
+    force_view = true;
+    force.nodes(forceNodes);
+    force.links(forceLinks);
     force.start();
   };
 
@@ -230,20 +458,30 @@ function ready(error, jsonData){
     return skills.filter(function(d){ return d.id === skill.id; });
   };
 
+  // J: refactored so that we can get 'people_moving' and 'skills_moving' selectors to be used in tick-method of force calculation.
   function startSkillForce(center){
     unfix();
     center['fixed'] = true;
+    people_moving = people.filter(function (d) {
+      return _.contains( d.skills, center.id);
+    });
+    skills_moving = null;
 
-    forceNodes.push(center);
-    _.each(_.filter( jsonData.people, function(d){ return _.contains( d.skills, center.id) ; }),
-        function(d){
-          forceNodes.push( d );
-          forceLinks.push({ source: center, target: d });
-        }
+    forceNodes = [center];
+    forceLinks = [];
+    people_moving.each(function(d) { 
+      forceNodes.push(d);
+      forceLinks.push({ source: center, target: d});
+      d.px = d.x;
+      d.py = d.y;
+      }
     );
 
     createLinks();
 
+    force_view = true;
+    force.nodes(forceNodes);
+    force.links(forceLinks);
     force.start();
   };
 
@@ -279,7 +517,8 @@ function ready(error, jsonData){
   };
 
   function skillInClass(c){
-    return skills.filter(function(d){ return c.skills[d.id] !== 0; });
+    return skills.filter(function(d){ 
+      return c.skills[d.id] !== 0; });
   };
 
   function skillNotInClass(c){
@@ -305,7 +544,7 @@ function ready(error, jsonData){
 
   /* ACTIONS */
   function highlightPerson(person){
-    describe(person.name + '\'s interests and other people in ' + person.category);
+    describe(person.name + '\'s interests and others in ' + person.category);
     
     emptyForce();
     moveToCenter(findPerson(person));
@@ -336,30 +575,30 @@ function ready(error, jsonData){
     hideTip();
   };
 
+  // J: Data for classes seems to be broken, see Sound in NM -classes in original, none of them have Sound Design, though it is the most popular interest. Instead of using class data, this just counts the interests of people in that class.
   function highlightClass(c){
     describe('People in ' + c.name + ' and their interests');
 
     emptyForce(); // No force layout in class
 
-    disappear(skillNotInClass(c));
-    appear(skillInClass(c));
-    disappear(peopleNotInClass(c.cat));
-    appear(peopleInClass(c.cat));
+    var p = peopleInClass(c.cat);
+    var not_p = d3.selectAll(_.difference(people[0], p[0]));
 
+    var class_skills = skillsRelatedToPeople(p);
+    var not_skills = d3.selectAll(_.difference(skills[0], class_skills[0]));
+    moveToStart(people);
+    moveToStart(skills);
+    disappear(not_skills);
+    appear(class_skills);
+    disappear(not_p);
+    appear(p);
     hideTip();
   };
 
   function addOriginalXY(s){
-    _.each(s, function(d){
-      d['ox'] = d.x;
-      d['oy'] = d.y;
-    });
-  };
-
-  function scale(s, t){
-    _.each(s, function(d){
-        d.x = t * xScale(d.x) + (1-t)*(borders.right - borders.left )/2;
-        d.y = t * yScale(d.y) + (1-t)*(borders.bottom - borders.top )/2;
+    s.each(function(d){
+      d.original_x = d.x;
+      d.original_y = d.y;
     });
   };
       
@@ -373,37 +612,51 @@ function ready(error, jsonData){
 
   /* START/RESET */
   function startViz(){
-    // Skills are layed out poorly so we place them with a couple ticks of force layout.
-    scale(jsonData.people, 1);
-    scale(jsonData.skills, 0.8); // for the force layout, since negative charge expands
 
-    skills = createInstances(container, jsonData.skills, 'text');
+    skills = createInstances(container, 'text.skills', jsonData.skills, 'text');
     createSkills(skills);
     
-    appear(skills);
-    placeSkills();
+    // J: disabled next one, as it is valuable to have the original SOM computation there too. Force networks are all kind of similar after seeing few, that SOM makes this more interesting 
 
-    people = createInstances(container, jsonData.people, 'div');
+    // Skills are layed out poorly so we place them with a couple ticks of force layout.
+    //placeSkills();
+
+    people = createInstances(container, 'div.people', jsonData.people, 'div');
     createPeople(people);
+
+    addOriginalXY(people);
+    addOriginalXY(skills);
+
+    // J: appear now needs original_x and original_y, so moved them to after addOriginalXY 
     appear(people);
+    appear(skills);
 
-    addOriginalXY(jsonData.people);
-    addOriginalXY(jsonData.skills);
-
-    peopleDropdown = createInstances(stDDContainer, jsonData.people, 'li');
+    peopleDropdown = createInstances(stDDContainer, 'li', jsonData.people, 'li');
     createDropdown(peopleDropdown, highlightPerson);
 
-    skillDropdown = createInstances(skDDContainer, jsonData.skills, 'li');
+    skillDropdown = createInstances(skDDContainer, 'li', jsonData.skills, 'li');
     createDropdown(skillDropdown, highlightSkill);
 
-    classDropdown = createInstances(clDDContainer, jsonData.classes, 'li');
+    classDropdown = createInstances(clDDContainer, 'li', jsonData.classes, 'li');
     createDropdown(classDropdown, highlightClass);
 
-    links = createInstances(svg, [], 'link');
+    links = createInstances(svg, 'link', [], 'link');
     force = createForce();
 
     $('#hdr').on('click', resetViz);
     $('#showAll').on('click', resetViz);
+
+    // Create listeners for hover-events. We need to use jQuery, since slider overrides z-index definitions from css-file.  
+    $('div.person').hover(function() {
+      $(this).css('z-index', 200);
+    }, function() { 
+      $(this).css('z-index', person_z_index)
+    });
+    $('text.skill').hover(function() {
+      $(this).css('z-index', 200);
+    }, function() { 
+      $(this).css('z-index', skill_z_index)
+    });
 
     describe('This is Media Lab. Click on anything!');
   };
@@ -416,6 +669,8 @@ function ready(error, jsonData){
     appear(people);
     appear(skills);
     describe('This is Media Lab. Click on anything!');
+    // comment this away to get broken_images.json -data
+    //console.log(JSON.stringify(broken_images));
   };
 
   startViz();

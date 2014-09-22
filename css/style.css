@@ -3,9 +3,12 @@ footer {
 }
 
 body {
-    background-image: url('subtle_dots.png');
+    /* J: grey background gives more presence to light grey interest-tags and force lines look better, especially in retina screens */
+    /* background-image: url('subtle_dots.png'); */
+    background: #ccc;
 }
 
+/* J: Removed unnecessary strong border color (white) */  
 .people{
   position: absolute;
   display: block;
@@ -23,15 +26,18 @@ body {
   line-height: 35px;
   border-width: 2px;
   border-style: solid;
-  border-color: #ffffff;
+  border-color: transparent;
 
   style-webkit-background-clip: padding-box; 
   -moz-background-clip: padding; 
   background-clip: padding-box;
+  z-index:12;
 }
 
+/* J: slight border is present only when hovering */
 .people:hover {
-  border-color: #000000;
+  border-color: #333;
+  z-index:200;
 }
 
 .people:img {
@@ -47,37 +53,33 @@ body {
     stroke-width: 1.5px;
 }
 
+/* J: Made tooltip to match the style of other elements. Removed black and white, use shades instead. */
 div.tooltip {   
   position: absolute;           
   text-align: center;           
-  width: 60px;                  
-  height: 30px;                 
-  padding: 2px;             
-  font: 12px sans-serif;        
-  color: white;
-  background: black;
-  border: 0px;      
-  border-radius: 2px;           
-  pointer-events: none;         
+  padding: 2pt 4pt;             
+  color: #eee;
+  background: #333;
+  border-radius: 4px;           
+  pointer-events: none;
+  z-index:210;         
 }
 
+/* J: Skills have slighter padding so they won't cover each other so easily. Removed too strong white color */
 .skill{
   text-anchor: middle;
   text-align: center;
-  text-size: 20px;
-  background:#ffffff;
+  background:#ddd;
   position: absolute;
   margin: 0 auto;
   cursor: pointer;
-  padding: 4pt;
+  padding: 2pt;
   border-radius: 8px;
-  border-width: 2px;
-  border-style: solid;
-  border-color: #ffffff;
+  z-index:10;
 }
 
+/* Removed too border as unnecessary and too strong for the purpose. */
 .skill:hover {
-  border-color:#000000;
   background:#f8f8f8;
   z-index:200;
 }
@@ -125,6 +127,21 @@ a:hover {
 .navbar .navbar-collapse {
   text-align: center;
 }
+
+/* J: Added slider and made some color and position adjustments to fit better to navbar */
+
+div.slider.slider-horizontal {
+  top: 6px;
+}
+
+.slider-handle {
+  background-color: #9a9495 !important;
+  background-image: -webkit-linear-gradient(top, #949b9f 0%, #34404e 100%);
+  background-image: -o-linear-gradient(top, #949b9f 0%, #34404e 100%);
+  background-image: linear-gradient(to bottom, #949b9f 0%, #34404e 100%);
+}
+
+
 
 @media screen and (min-width: 992px){
     .columns_classes{
