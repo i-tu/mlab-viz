@@ -8,27 +8,48 @@ function ready(error, jsonData, jsonBroken_images){
   var width, height, borders, w, h;
   var broken_images = [];
 
-  var force_view = false;
-  var centered_element = null;
-
   var tdur = 500;
 
-  /* DEFINITIONS */
-  var skills; // Skills d3 selection
-  var people; // People d3 selection
-  var force;  // D3 force layout
-  var forceNodes = []; // Nodes & links for force layout
-  var forceLinks = [];
-  var people_moving = null;
-  var skills_moving = null;
-
-  broken_images = jsonBroken_images ? jsonBroken_images.missing : [];
-
-  // NOTE: most stuff is, unconventionally for d3, simple divs. the svg element is just to draw lines.
+ // NOTE: most stuff is, unconventionally for d3, simple divs. the svg element is just to draw lines.
   var container = d3.select('#content');
   var svg = container.append('svg');
 
+    /* DEFINITIONS */
+  var skills; // Skills d3 selection
+  var people; // People d3 selection
+  var center = {'x':0, 'y':0};
+  var links = svg.selectAll("link");
+  var dests = [];
+
+  broken_images = jsonBroken_images ? jsonBroken_images.missing : [];
+
+  function set_scale() {
+    width = $('#content').width()
+    height = $(window).height() - $('#content').offset().top - 40;
+    $('#content').height(height);
+    
+    var margin = 30;
+    borders = { left: margin, right: width - (margin*2), top: 0, bottom: height - margin};
+
+    xScale = d3.scale.linear()
+                   .domain([original_min_x, original_max_x])
+                   .range([ borders.left, borders.right]);
+   
+    yScale = d3.scale.linear()
+                   .domain([original_min_y, original_max_y])
+                   .range([ borders.bottom, borders.top ]);
+
+    svg.attr("width", width)
+       .attr("height", height);
+  };
+
   set_scale();
+
+  $(window).resize(function(){
+    moveToStart(people);
+    moveToStart(skills);
+    set_scale();
+  });
 
   var stDDContainer = d3.select('#peopleDropdown');
   var skDDContainer = d3.select('#skillDropdown');
@@ -54,42 +75,19 @@ function ready(error, jsonData, jsonBroken_images){
               .append("div")   
               .attr("class", "tooltip")               
               .style("opacity", 0);
-
-   $(window).resize(function (){
-    set_scale();
-    if (force_view) {
-      moveToCenter(centered_element)
-    } else {
-      moveToStart(people);
-      moveToStart(skills);      
-    }
-  });
-
-  // Redefines all of the size-dependant variables set at the initialization. Called every time a resize event occurs.
-  function set_scale() {
-    width = $('#content').width()
-    height = $(window).height() - $('#content').offset().top - 40;    
-    $('#content').height(height);
-    
-    borders = { left: 20, right: width - 60, top: 0, bottom: height - 40};
-
-    w = borders.right - borders.left;
-    h = borders.bottom - borders.top;
-
-    xScale = d3.scale.linear()
-                   .domain([original_min_x, original_max_x])
-                   .range([ borders.left, borders.right]);
-   
-    yScale = d3.scale.linear()
-                   .domain([original_min_y, original_max_y])
-                   .range([ borders.bottom, borders.top ]);
-    svg.attr("width", w).attr("height", h);
+  
+  function move(s){
+    s.style('left', function(d){
+      return constrain(xScale(d.x), borders.left, borders.right) + 'px';
+    })
+    .style('top',  function(d){
+      return constrain(yScale(d.y), borders.top, borders.bottom) + 'px';
+    });
   };
 
   function constrain(x, lo, hi) {
     return Math.min(Math.max(x, lo), hi);
   };
-
 
   /* BUILDING FUNCTIONS */
   function createInstances(container, selector, objects, type){
@@ -138,43 +136,29 @@ function ready(error, jsonData, jsonBroken_images){
           .text(function(d){ return d.name; })
           .on('click', action);
   };
+  
+  function emptyLinks(){
+    $("svg").empty();
+   };
 
-  // J: Moving only subsets of people and skills. Removed node and lines from initialization, they are added in startPeopleForce and startSkillsForce. 
-  function createForce () {
-    return d3.layout.force()
-      .charge( -3000 )
-      .gravity( 0 )
-      .size([original_max_x - original_min_x, original_max_y - original_min_y])
-      .on('tick', function(e) {
-        if (skills_moving) {
-          move(skills_moving);
-        }
-        if (people_moving) {
-          move(people_moving);
-        }
-        move(centered_element);
-        links.attr("x1", function(d) { return xScale(d.source.x) + 20; })
-             .attr("y1", function(d) { return yScale(d.source.y) + 20; })
-             .attr("x2", function(d) { return xScale(d.target.x) + 20; })
-             .attr("y2", function(d) { return yScale(d.target.y) + 20; });
-      });
-  };
+  function createLinks(c, dsts){
+    center = {'x': c['x'], 'y': c['y']};
+    dests = dsts;
 
-  function move(s){
-    s.style('left', function(d){
-      return constrain(xScale(d.x), borders.left, borders.right) + 'px';
-    })
-    .style('top',  function(d){
-      return constrain(yScale(d.y), borders.top, borders.bottom) + 'px'; });
-  };
-
-  function createLinks(){
     links = svg.selectAll("link")
-               .data(forceLinks);
+               .data( _.map(dests[0], function(d){ return d.__data__; }) );
 
     links.enter()
          .append("line")
          .attr("class", "link")
+         .attr('x1', (xScale(center.x) +20) + 'px')
+         .attr('y1', (yScale(center.y) +20) + 'px')
+         .attr('x2', (xScale(center.x) +20) + 'px')
+         .attr('y2', (yScale(center.y) +20) + 'px')
+         .transition()
+         .duration(tdur)
+         .attr('x2', function(d){ return (xScale(d.x)+20) + 'px'; })
+         .attr('y2', function(d){ return (yScale(d.y)+20) + 'px'; });
   };
 
   /* TRANSITIONS */
@@ -209,108 +193,45 @@ function ready(error, jsonData, jsonBroken_images){
     f = d.filter(function(e) {return (this.style.display === 'hidden' || this.style.opacity < 1.0) } );
     f.style('display', 'block')
      .each(function(d){ 
-        d.x = d.original_x; 
         d.px = d.x; 
-        d.y = d.original_y; 
         d.py = d.y; 
      })
-     if (force_view) {
-       f.transition()
-        .duration(tdur)
-        .style('opacity', 1)
-        .each('end', function () {
-         this.style.display = 'block';
-       });
-     } else {
-       f.transition()
-        .duration(tdur)
-        .style('opacity', 1)
-        .style('left', function(d){ return xScale(d.x) + "px" })
-        .style('top', function(d){ return yScale(d.y) + "px" })
-        .each('end', function () {
-         this.style.display = 'block';
-         this.style.left = xScale(d.x) + "px";
-         this.style.top = xScale(d.y) + "px";
-       });
-     }
+
+    f.transition()
+     .duration(tdur)
+     .style('opacity', 1)
+     .style('left', function(d){ return xScale(d.x) + "px" })
+     .style('top', function(d){ return yScale(d.y) + "px" })
+     .each('end', function () {
+       this.style.display = 'block';
+       this.style.left = xScale(d.x) + "px";
+       this.style.top = xScale(d.y) + "px";
+     });
   };
 
   function describe(desc){
     $('#hdr').text(desc);
   };
 
+  function endAll(transition, callback) { 
+    var n = 0; 
+    transition 
+        .each(function() { ++n; }) 
+        .each("end", function() { if (!--n) callback.apply(this, arguments); }); 
+  };
+
   function moveToStart(s){
-    s.each(function(d) { d.x = d.original_x; d.px = d.x; d.y = d.original_y; d.py = d.y; });
+    emptyLinks();
+
     s.transition()
      .duration(tdur*2)
      .style('left', function(d){ return xScale(d.x) + "px" })
-     .style('top', function(d){ return yScale(d.y) + "px" });
-  };
-
-  function moveToCenter(s){
-    centered_element = s;
-    var center_x = (original_min_x + original_max_x) / 2
-    var center_y = (original_min_y + original_max_y) / 2
-    s.style('left', function(d) {
-       d.px = center_x; 
-       d.x = center_x;
-       return xScale(d.x) + "px";
-     })
-     .style('top', function(d){  
-       d.py = center_y;
-       d.y = center_y;
-       return yScale(d.y) + "px"; 
+     .style('top', function(d){ return yScale(d.y) + "px" })
+     .call(endAll, function(){
+        createLinks(center, dests);
      });
   };
 
-  function emptyForce(){
-    force_view = false;
-    $('svg').empty();
-    while(forceNodes.length > 0) { forceNodes.pop(); }
-    while(forceLinks.length > 0) { forceLinks.pop(); }
-    people_moving = null;
-    skills_moving = null;
-  };
-
-  function unfix(){
-    people.each(function(d){ d['fixed'] = false; });
-    skills.each(function(d){ d['fixed'] = false; });
-  };
-
-  function startPeopleForce(center){
-    unfix();
-    center['fixed'] = true;
-
-    people_moving = people.filter(function (d) {
-      return d.cat === center.cat;
-    });
-
-    skills_moving = skills.filter(function (d) {
-      return _.contains(center.skills, d.id); 
-    });
-
-    forceLinks = [];
-    people_moving.each(function(d) { 
-      forceNodes.push(d);
-      forceLinks.push({ source: center, target: d});
-      d.px = d.x;
-      d.py = d.y;
-      }
-    );
-
-    skills_moving.each(function(d) { 
-      forceNodes.push(d);
-      forceLinks.push({ source: center, target: d});
-      d.px = d.x;
-      d.py = d.y;
-      }
-    );
-
-    createLinks();
-
-    force_view = true;
-    force.start();
-  };
 
   function findPerson(person){
     return people.filter(function(d){ return d.n === person.n; });
@@ -318,46 +239,6 @@ function ready(error, jsonData, jsonBroken_images){
 
   function findSkill(skill){
     return skills.filter(function(d){ return d.id === skill.id; });
-  };
-
-  // J: refactored so that we can get 'people_moving' and 'skills_moving' selectors to be used in tick-method of force calculation.
-  function startSkillForce(center){
-    unfix();
-    center['fixed'] = true;
-
-    people_moving = people.filter(function (d) {
-      return _.contains( d.skills, center.id);
-    });
-
-    skills_moving = null;
-
-    forceNodes.push(center);
-    forceLinks = [];
-    people_moving.each(function(d) { 
-      forceNodes.push(d);
-      forceLinks.push({ source: center, target: d});
-      d.px = d.x;
-      d.py = d.y;
-      }
-    );
-
-    createLinks();
-
-    force_view = true;
-    force.start();
-  };
-
-  function placeSkills(){
-    var sForce = d3.layout.force()
-        .gravity(0)
-        .charge(-600)
-        .nodes(jsonData.skills)
-        .on('tick', function(){move(skills)});
-
-        sForce.start();
-        for(var i = 0;i < 2; i++)
-          sForce.tick();
-        sForce.stop();
   };
 
   /* GROUPS */
@@ -401,14 +282,9 @@ function ready(error, jsonData, jsonBroken_images){
     return skillsNotInSkillset(_.union(_.flatten(_.map(s[0], function(d){ return d.__data__.skills; }))));
   };
 
-
   /* ACTIONS */
   function highlightPerson(person){
     describe(person.name + '\'s interests and others in ' + person.category);
-    emptyForce();
-
-    moveToCenter(findPerson(person));
-    startPeopleForce( person );
 
     disappear(skillsNotInSkillset(person.skills));
     appear(skillsInSkillset(person.skills));
@@ -416,15 +292,15 @@ function ready(error, jsonData, jsonBroken_images){
     disappear(peopleNotInClass(person.cat));
     appear(peopleInClass(person.cat));
 
+    emptyLinks();
+    createLinks(person, skillsInSkillset(person.skills));
+    createLinks(person, peopleInClass(person.cat));
+
     hideTip();
   };
 
   function highlightSkill(skill){
     describe('People interested in ' + skill.name)
-    emptyForce();
-
-    moveToCenter(findSkill(skill));
-    startSkillForce( skill );
 
     disappear(peopleNotWithSkill(skill));
     appear(peopleWithSkill(skill));
@@ -432,12 +308,14 @@ function ready(error, jsonData, jsonBroken_images){
     appear( skills.filter(function(d){ return d.id === skill.id; } ));
     disappear( skills.filter(function(d){ return d.id !== skill.id; } ));
 
+    emptyLinks();
+    createLinks(skill, peopleWithSkill(skill));
+
     hideTip();
   };
 
   function highlightClass(c){
     describe('People in ' + c.name + ' and their interests');
-    emptyForce();
 
     var p = peopleInClass(c.cat);
     var not_p = d3.selectAll(_.difference(people[0], p[0]));
@@ -445,12 +323,13 @@ function ready(error, jsonData, jsonBroken_images){
     var class_skills = skillsRelatedToPeople(p);
     var not_skills = d3.selectAll(_.difference(skills[0], class_skills[0]));
 
-    moveToStart(people);
-    moveToStart(skills);
     disappear(not_skills);
     appear(class_skills);
     disappear(not_p);
     appear(p);
+
+    emptyLinks();
+
     hideTip();
   };
 
@@ -465,12 +344,9 @@ function ready(error, jsonData, jsonBroken_images){
   function startViz(){
     skills = createInstances(container, 'text.skills', jsonData.skills, 'text');
     createSkills(skills);
-    addOriginalXY(skills); 
-    placeSkills(); // Skills are layed out poorly so we place them with a couple ticks of force layout. 
 
     people = createInstances(container, 'div.people', jsonData.people, 'div');
     createPeople(people);
-    addOriginalXY(people);
 
     peopleDropdown = createInstances(stDDContainer, 'li', jsonData.people, 'li');
     createDropdown(peopleDropdown, highlightPerson);
@@ -481,9 +357,6 @@ function ready(error, jsonData, jsonBroken_images){
     classDropdown = createInstances(clDDContainer, 'li', jsonData.classes, 'li');
     createDropdown(classDropdown, highlightClass);
 
-    links = createInstances(svg, 'link', [], 'link');
-    force = createForce();
-
     $('#hdr').on('click', resetViz);
     $('#showAll').on('click', resetViz);
 
@@ -492,13 +365,12 @@ function ready(error, jsonData, jsonBroken_images){
 
   function resetViz(){
     set_scale();
-    emptyForce();
     hideTip();
     moveToStart(people);
     moveToStart(skills);
     appear(people);
     appear(skills);
-
+    emptyLinks();
     describe('This is Media Lab. Click on anything!');
   };
 
