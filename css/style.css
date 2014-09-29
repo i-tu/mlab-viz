@@ -3,10 +3,10 @@ footer {
 }
 
 body {
-    background-image: url('subtle_dots.png');
+    background: #FEFEFA;
 }
 
-.people{
+.people {
   position: absolute;
   display: block;
   border-radius: 20px;
@@ -23,22 +23,24 @@ body {
   line-height: 35px;
   border-width: 2px;
   border-style: solid;
-  border-color: #ffffff;
+  border-color: #FFFFFF;
 
   style-webkit-background-clip: padding-box; 
   -moz-background-clip: padding; 
   background-clip: padding-box;
+  z-index:12;
 }
 
 .people:hover {
-  border-color: #000000;
+  border-color: #333;
+  z-index:200;
 }
 
 .people:img {
   z-index: 0;
 }
 
-.student:text{
+.student:text {
   z-index: 0;
 }
 
@@ -50,34 +52,27 @@ body {
 div.tooltip {   
   position: absolute;           
   text-align: center;           
-  width: 60px;                  
-  height: 30px;                 
-  padding: 2px;             
-  font: 12px sans-serif;        
-  color: white;
-  background: black;
-  border: 0px;      
-  border-radius: 2px;           
-  pointer-events: none;         
+  padding: 2pt 4pt;             
+  color: #eee;
+  background: #333;
+  border-radius: 4px;           
+  pointer-events: none;
+  z-index:210;         
 }
 
 .skill{
   text-anchor: middle;
   text-align: center;
-  text-size: 20px;
-  background:#ffffff;
+  background:#f8f8f8;
   position: absolute;
   margin: 0 auto;
   cursor: pointer;
-  padding: 4pt;
+  padding: 2pt;
   border-radius: 8px;
-  border-width: 2px;
-  border-style: solid;
-  border-color: #ffffff;
+  z-index:10;
 }
 
 .skill:hover {
-  border-color:#000000;
   background:#f8f8f8;
   z-index:200;
 }
@@ -126,20 +121,20 @@ a:hover {
   text-align: center;
 }
 
-@media screen and (min-width: 992px){
+@media screen and (min-width: 992px) {
     .columns_classes{
         -moz-column-count:2; /* Firefox */
         -webkit-column-count:2; /* Safari and Chrome */
         column-count:2;
         width: 500px;
     }
-    .columns_skills{
+    .columns_skills {
         -moz-column-count:6; /* Firefox */
         -webkit-column-count:6; /* Safari and Chrome */
         column-count:6;
         width: 1000px;
     }
-    .columns_people{
+    .columns_people {
         -moz-column-count:8; /* Firefox */
         -webkit-column-count:8; /* Safari and Chrome */
         column-count:8;
